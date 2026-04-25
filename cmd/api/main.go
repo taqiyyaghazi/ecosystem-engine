@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to redis: %v", err)
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	// 2. Initialize Feature Slices
 	serviceRepo := repository.NewServiceRepository(dbPool, rdb)

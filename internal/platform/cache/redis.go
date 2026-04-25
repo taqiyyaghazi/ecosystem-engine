@@ -22,6 +22,6 @@ func NewRedisClient(ctx context.Context, url, password string, dbStr string) (*r
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	fmt.Fprintln(os.Stdout, "Successfully connected to Redis")
+	_, _ = fmt.Fprintln(os.Stdout, "Successfully connected to Redis")
 	return rdb, nil
 }

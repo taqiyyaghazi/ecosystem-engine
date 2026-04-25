@@ -1,6 +1,6 @@
 # Binaries
-api
-api.exe
+/api
+/api.exe
 
 # Dependencies
 vendor/

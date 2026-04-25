@@ -23,6 +23,6 @@ func NewPostgresPool(ctx context.Context, connStr string) (*pgxpool.Pool, error)
 		return nil, fmt.Errorf("unable to ping database: %w", err)
 	}
 
-	fmt.Fprintln(os.Stdout, "Successfully connected to PostgreSQL")
+	_, _ = fmt.Fprintln(os.Stdout, "Successfully connected to PostgreSQL")
 	return pool, nil
 }
