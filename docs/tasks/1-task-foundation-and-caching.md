@@ -1,0 +1,24 @@
+# Tasks - Foundation and Caching (Phase 1)
+
+- [ ] Project Initialization & Structure
+    - [ ] Initialize Go module
+    - [ ] Create directory structure
+    - [ ] Create `.env.example`
+- [ ] Platform Layer
+    - [ ] Implement `internal/platform/config/config.go` (using `os.Getenv`)
+    - [ ] Implement `internal/platform/database/postgres.go`
+    - [ ] Implement `internal/platform/cache/redis.go`
+- [ ] Database & Migrations
+    - [ ] Create `migrations/202604250001_create_services_table.sql`
+    - [ ] Run migrations (if possible)
+- [ ] Services Feature Slice
+    - [ ] Create `internal/features/services/entity/service.go`
+    - [ ] Create `internal/features/services/dto/service_dto.go`
+    - [ ] Create `internal/features/services/repository/repository.go`
+    - [ ] Create `internal/features/services/usecase/usecase.go`
+    - [ ] Create `internal/features/services/delivery/handler.go`
+- [ ] API Entry Point
+    - [ ] Implement `cmd/api/main.go`
+- [ ] Verification
+    - [ ] Verify CRUD endpoints
+    - [ ] Verify Redis caching logic
