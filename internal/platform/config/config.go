@@ -15,8 +15,6 @@ type Config struct {
 	RedisDB     string
 }
 
-// LoadConfig reads environment variables and returns a validated Config.
-// Returns an error if a required variable is missing.
 func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 

@@ -31,7 +31,6 @@ func (h *ServiceHandler) RegisterRoutes(r *gin.RouterGroup) {
 	}
 }
 
-// httpError maps domain errors to the appropriate HTTP status code.
 func httpError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, apperror.ErrNotFound):

@@ -7,6 +7,7 @@ endif
 # Binary name
 BINARY_NAME=api
 MAIN_PATH=cmd/api/main.go
+GOOSE=$(shell which goose 2> /dev/null || echo $(shell go env GOPATH)/bin/goose)
 
 .PHONY: all build run test clean lint migrate-up migrate-down migrate-status
 
@@ -55,16 +56,16 @@ test:
 ## Migrations:
 migrate-up:
 	@echo "Running migrations up..."
-	goose -dir migrations postgres "$(DATABASE_URL)" up
+	$(GOOSE) -dir migrations postgres "$(DATABASE_URL)" up
 
 migrate-down:
 	@echo "Running migrations down..."
-	goose -dir migrations postgres "$(DATABASE_URL)" down
+	$(GOOSE) -dir migrations postgres "$(DATABASE_URL)" down
 
 migrate-status:
 	@echo "Checking migration status..."
-	goose -dir migrations postgres "$(DATABASE_URL)" status
+	$(GOOSE) -dir migrations postgres "$(DATABASE_URL)" status
 
 migrate-create:
 	@read -p "Enter migration name: " name; \
-	goose -dir migrations create $$name sql
+	$(GOOSE) -dir migrations create $$name sql

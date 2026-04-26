@@ -51,7 +51,6 @@ func (r *serviceRepository) Create(ctx context.Context, s *entity.Service) error
 }
 
 func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error) {
-	// 1. Try get from Redis
 	val, err := r.redis.Get(ctx, cacheKeyAll).Result()
 	if err == nil {
 		var services []entity.Service
@@ -63,7 +62,6 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 
 	slog.DebugContext(ctx, "Cache MISS", "key", cacheKeyAll)
 
-	// 2. Fallback to DB
 	query := `SELECT id, name, description, price, created_at, updated_at FROM services ORDER BY created_at DESC`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
@@ -80,7 +78,6 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 		services = append(services, s)
 	}
 
-	// 3. Set to Redis
 	if data, err := json.Marshal(services); err == nil {
 		r.redis.Set(ctx, cacheKeyAll, data, cacheTTL)
 	}
@@ -91,7 +88,6 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Service, error) {
 	key := fmt.Sprintf(cacheKeyDetail, id)
 
-	// 1. Try get from Redis
 	val, err := r.redis.Get(ctx, key).Result()
 	if err == nil {
 		var s entity.Service
@@ -103,7 +99,6 @@ func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Ser
 
 	slog.DebugContext(ctx, "Cache MISS", "key", key)
 
-	// 2. Fallback to DB
 	var s entity.Service
 	query := `SELECT id, name, description, price, created_at, updated_at FROM services WHERE id = $1`
 	err = r.db.QueryRow(ctx, query, id).Scan(&s.ID, &s.Name, &s.Description, &s.Price, &s.CreatedAt, &s.UpdatedAt)
@@ -111,7 +106,6 @@ func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Ser
 		return nil, err
 	}
 
-	// 3. Set to Redis
 	if data, err := json.Marshal(s); err == nil {
 		r.redis.Set(ctx, key, data, cacheTTL)
 	}

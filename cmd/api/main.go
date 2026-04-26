@@ -28,7 +28,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 1. Setup Platform
 	dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -41,12 +40,10 @@ func main() {
 	}
 	defer func() { _ = rdb.Close() }()
 
-	// 2. Initialize Feature Slices
 	serviceRepo := repository.NewServiceRepository(dbPool, rdb)
 	serviceUsecase := usecase.NewServiceUsecase(serviceRepo)
 	serviceHandler := delivery.NewServiceHandler(serviceUsecase)
 
-	// 3. Setup Gin
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -56,7 +53,6 @@ func main() {
 	v1 := r.Group("/v1")
 	serviceHandler.RegisterRoutes(v1)
 
-	// 4. Start Server with Graceful Shutdown
 	srv := &http.Server{
 		Addr:    ":" + cfg.AppPort,
 		Handler: r,
@@ -69,7 +65,6 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
