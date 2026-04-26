@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,36 +21,38 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	if err := run(); err != nil {
+		slog.Error("Application failed to start", "error", err)
+		os.Exit(1)
+	}
+}
 
+func run() error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		slog.Error("Configuration error", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("loading config: %w", err)
 	}
 
-	if cfg.AppEnv == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	setupLogger(cfg.AppEnv)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer dbCancel()
 
-	dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
+	dbPool, err := database.NewPostgresPool(dbCtx, cfg.DatabaseURL)
 	if err != nil {
-		slog.Error("Failed to connect to database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("connecting to database: %w", err)
 	}
 	defer func() {
 		dbPool.Close()
 		slog.Info("Database connection closed")
 	}()
 
-	rdb, err := cache.NewRedisClient(ctx, cfg.RedisURL, cfg.RedisPass, cfg.RedisDB)
+	rdbCtx, rdbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer rdbCancel()
+
+	rdb, err := cache.NewRedisClient(rdbCtx, cfg.RedisURL, cfg.RedisPass, cfg.RedisDB)
 	if err != nil {
-		slog.Error("Failed to connect to redis", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("connecting to redis: %w", err)
 	}
 	defer func() {
 		_ = rdb.Close()
@@ -59,6 +62,59 @@ func main() {
 	serviceRepo := repository.NewServiceRepository(dbPool, rdb)
 	serviceUsecase := usecase.NewServiceUsecase(serviceRepo)
 	serviceHandler := delivery.NewServiceHandler(serviceUsecase)
+
+	router := setupRouter(cfg.AppEnv, serviceHandler)
+
+	srv := &http.Server{
+		Addr:         ":" + cfg.AppPort,
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		slog.Info("Server starting", "port", cfg.AppPort, "env", cfg.AppEnv)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("Server failed", "error", err)
+			stop()
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("Shutting down gracefully...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown: %w", err)
+	}
+
+	slog.Info("Server exited")
+	return nil
+}
+
+func setupLogger(env string) {
+	var handler slog.Handler
+	if env == "production" {
+		handler = slog.NewJSONHandler(os.Stdout, nil)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})
+	}
+	slog.SetDefault(slog.New(handler))
+}
+
+func setupRouter(env string, serviceHandler *delivery.ServiceHandler) *gin.Engine {
+	if env == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -69,37 +125,9 @@ func main() {
 	})
 
 	v1 := r.Group("/v1")
-	serviceHandler.RegisterRoutes(v1)
-
-	srv := &http.Server{
-		Addr:         ":" + cfg.AppPort,
-		Handler:      r,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+	{
+		serviceHandler.RegisterRoutes(v1)
 	}
 
-	go func() {
-		slog.Info("Server starting", "port", cfg.AppPort, "env", cfg.AppEnv)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("Server failed to start", "error", err)
-			os.Exit(1)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	slog.Info("Shutting down server...")
-
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutdownCancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("Server forced to shutdown", "error", err)
-		os.Exit(1)
-	}
-
-	slog.Info("Server exited gracefully")
+	return r
 }
