@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	AppPort     string
+	AppEnv      string
 	DatabaseURL string
 	RedisURL    string
 	RedisPass   string
@@ -25,6 +26,7 @@ func LoadConfig() (*Config, error) {
 
 	return &Config{
 		AppPort:     getEnv("APP_PORT", "8080"),
+		AppEnv:      getEnv("APP_ENV", "development"),
 		DatabaseURL: dbURL,
 		RedisURL:    getEnv("REDIS_URL", "localhost:6379"),
 		RedisPass:   getEnv("REDIS_PASSWORD", ""),
