@@ -3,14 +3,18 @@ package cache
 import (
 	"context"
 	"fmt"
-	"os"
+	"log/slog"
 	"strconv"
 
 	"github.com/redis/go-redis/v9"
 )
 
 func NewRedisClient(ctx context.Context, url, password string, dbStr string) (*redis.Client, error) {
-	db, _ := strconv.Atoi(dbStr)
+	db, err := strconv.Atoi(dbStr)
+	if err != nil {
+		slog.Warn("Invalid REDIS_DB value, defaulting to 0", "value", dbStr, "error", err)
+		db = 0
+	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     url,
@@ -22,6 +26,6 @@ func NewRedisClient(ctx context.Context, url, password string, dbStr string) (*r
 		return nil, fmt.Errorf("unable to connect to redis: %w", err)
 	}
 
-	_, _ = fmt.Fprintln(os.Stdout, "Successfully connected to Redis")
+	slog.Info("Successfully connected to Redis")
 	return rdb, nil
 }

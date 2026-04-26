@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -55,12 +56,12 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 	if err == nil {
 		var services []entity.Service
 		if err := json.Unmarshal([]byte(val), &services); err == nil {
-			fmt.Println("Cache HIT: " + cacheKeyAll)
+			slog.DebugContext(ctx, "Cache HIT", "key", cacheKeyAll)
 			return services, nil
 		}
 	}
 
-	fmt.Println("Cache MISS: " + cacheKeyAll)
+	slog.DebugContext(ctx, "Cache MISS", "key", cacheKeyAll)
 
 	// 2. Fallback to DB
 	query := `SELECT id, name, description, price, created_at, updated_at FROM services ORDER BY created_at DESC`
@@ -95,12 +96,12 @@ func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Ser
 	if err == nil {
 		var s entity.Service
 		if err := json.Unmarshal([]byte(val), &s); err == nil {
-			fmt.Println("Cache HIT: " + key)
+			slog.DebugContext(ctx, "Cache HIT", "key", key)
 			return &s, nil
 		}
 	}
 
-	fmt.Println("Cache MISS: " + key)
+	slog.DebugContext(ctx, "Cache MISS", "key", key)
 
 	// 2. Fallback to DB
 	var s entity.Service
@@ -145,6 +146,11 @@ func (r *serviceRepository) InvalidateCache(ctx context.Context, id string) {
 	if id != "" {
 		keys = append(keys, fmt.Sprintf(cacheKeyDetail, id))
 	}
-	r.redis.Del(ctx, keys...)
-	fmt.Printf("Cache INVALIDATED: %v\n", keys)
+
+	if err := r.redis.Del(ctx, keys...).Err(); err != nil {
+		slog.ErrorContext(ctx, "Failed to invalidate cache", "keys", keys, "error", err)
+		return
+	}
+
+	slog.InfoContext(ctx, "Cache invalidated", "keys", keys)
 }

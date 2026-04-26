@@ -2,8 +2,12 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
@@ -58,6 +62,9 @@ func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, err
 func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceResponse, error) {
 	s, err := u.repo.GetByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperror.ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -67,22 +74,25 @@ func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceRe
 func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateServiceRequest) (*dto.ServiceResponse, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, err
+		return nil, apperror.ErrInvalidUUID
 	}
 
 	s, err := u.repo.GetByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperror.ErrNotFound
+		}
 		return nil, err
 	}
 
-	if req.Name != "" {
-		s.Name = req.Name
+	if req.Name != nil {
+		s.Name = *req.Name
 	}
-	if req.Description != "" {
-		s.Description = req.Description
+	if req.Description != nil {
+		s.Description = *req.Description
 	}
-	if req.Price != 0 {
-		s.Price = req.Price
+	if req.Price != nil {
+		s.Price = *req.Price
 	}
 	s.ID = uid
 
@@ -94,7 +104,15 @@ func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateSe
 }
 
 func (u *serviceUsecase) Delete(ctx context.Context, id string) error {
-	return u.repo.Delete(ctx, id)
+	if _, err := uuid.Parse(id); err != nil {
+		return apperror.ErrInvalidUUID
+	}
+
+	if err := u.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (u *serviceUsecase) toResponse(s *entity.Service) *dto.ServiceResponse {
@@ -103,7 +121,7 @@ func (u *serviceUsecase) toResponse(s *entity.Service) *dto.ServiceResponse {
 		Name:        s.Name,
 		Description: s.Description,
 		Price:       s.Price,
-		CreatedAt:   s.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:   s.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:   s.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:   s.UpdatedAt.Format(time.RFC3339),
 	}
 }

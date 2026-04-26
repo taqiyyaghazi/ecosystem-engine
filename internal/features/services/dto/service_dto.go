@@ -6,10 +6,12 @@ type CreateServiceRequest struct {
 	Price       float64 `json:"price" binding:"required"`
 }
 
+// UpdateServiceRequest uses pointer fields so the usecase can distinguish
+// between "field not sent" (nil) and "field sent with zero value" (e.g. price=0).
 type UpdateServiceRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
+	Name        *string  `json:"name"`
+	Description *string  `json:"description"`
+	Price       *float64 `json:"price"`
 }
 
 type ServiceResponse struct {

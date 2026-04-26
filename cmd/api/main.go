@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +20,10 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -60,7 +63,7 @@ func main() {
 	}
 
 	go func() {
-		fmt.Printf("Server starting on port %s...\n", cfg.AppPort)
+		slog.Info("Server starting", "port", cfg.AppPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
@@ -70,7 +73,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -78,5 +81,5 @@ func main() {
 		log.Fatal("Server forced to shutdown:", err)
 	}
 
-	log.Println("Server exiting")
+	slog.Info("Server exited")
 }
