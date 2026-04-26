@@ -20,6 +20,14 @@ import (
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
 )
 
+const (
+	defaultReadTimeout     = 5 * time.Second
+	defaultWriteTimeout    = 10 * time.Second
+	defaultIdleTimeout     = 120 * time.Second
+	defaultShutdownTimeout = 10 * time.Second
+	defaultConnTimeout     = 10 * time.Second
+)
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("Application failed to start", "error", err)
@@ -35,7 +43,7 @@ func run() error {
 
 	setupLogger(cfg.AppEnv)
 
-	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), defaultConnTimeout)
 	defer dbCancel()
 
 	dbPool, err := database.NewPostgresPool(dbCtx, cfg.DatabaseURL)
@@ -47,7 +55,7 @@ func run() error {
 		slog.Info("Database connection closed")
 	}()
 
-	rdbCtx, rdbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	rdbCtx, rdbCancel := context.WithTimeout(context.Background(), defaultConnTimeout)
 	defer rdbCancel()
 
 	rdb, err := cache.NewRedisClient(rdbCtx, cfg.RedisURL, cfg.RedisPass, cfg.RedisDB)
@@ -68,9 +76,9 @@ func run() error {
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
 		Handler:      router,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  defaultReadTimeout,
+		WriteTimeout: defaultWriteTimeout,
+		IdleTimeout:  defaultIdleTimeout,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -87,7 +95,7 @@ func run() error {
 	<-ctx.Done()
 	slog.Info("Shutting down gracefully...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
