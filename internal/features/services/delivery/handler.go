@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
@@ -33,7 +35,7 @@ func (h *ServiceHandler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *ServiceHandler) Create(c *gin.Context) {
 	var req dto.CreateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httputil.HandleError(c, apperror.ErrInvalidInput)
 		return
 	}
 
@@ -43,7 +45,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, res)
+	httputil.NewSuccessResponse(c, http.StatusCreated, "service created successfully", res)
 }
 
 func (h *ServiceHandler) GetAll(c *gin.Context) {
@@ -53,25 +55,40 @@ func (h *ServiceHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, res)
+	httputil.NewSuccessResponse(c, http.StatusOK, "services retrieved successfully", res)
 }
 
 func (h *ServiceHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		httputil.HandleError(c, apperror.ErrInvalidUUID)
+		return
+	}
+
 	res, err := h.usecase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, res)
+	httputil.NewSuccessResponse(c, http.StatusOK, "service retrieved successfully", res)
 }
 
 func (h *ServiceHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		httputil.HandleError(c, apperror.ErrInvalidUUID)
+		return
+	}
+
 	var req dto.UpdateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		httputil.HandleError(c, apperror.ErrInvalidInput)
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		httputil.HandleError(c, apperror.ErrInvalidInput)
 		return
 	}
 
@@ -81,11 +98,16 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, res)
+	httputil.NewSuccessResponse(c, http.StatusOK, "service updated successfully", res)
 }
 
 func (h *ServiceHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		httputil.HandleError(c, apperror.ErrInvalidUUID)
+		return
+	}
+
 	if err := h.usecase.Delete(c.Request.Context(), id); err != nil {
 		httputil.HandleError(c, err)
 		return

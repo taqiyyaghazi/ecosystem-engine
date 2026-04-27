@@ -26,11 +26,12 @@ run: build
 ## Dev (using air for hot reload if installed):
 dev:
 	@if command -v air > /dev/null; then \
-		air; \
+		air -c .air.toml; \
 	else \
 		echo "Air is not installed. Running normally..."; \
 		go run $(MAIN_PATH); \
 	fi
+
 
 ## Clean:
 clean:
