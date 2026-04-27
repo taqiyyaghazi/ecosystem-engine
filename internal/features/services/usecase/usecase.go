@@ -109,6 +109,9 @@ func (u *serviceUsecase) Delete(ctx context.Context, id string) error {
 	}
 
 	if err := u.repo.Delete(ctx, id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.ErrNotFound
+		}
 		return err
 	}
 

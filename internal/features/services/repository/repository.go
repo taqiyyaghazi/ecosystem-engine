@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
@@ -127,9 +128,13 @@ func (r *serviceRepository) Update(ctx context.Context, s *entity.Service) error
 
 func (r *serviceRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM services WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id)
+	tag, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 
 	r.InvalidateCache(ctx, id)
