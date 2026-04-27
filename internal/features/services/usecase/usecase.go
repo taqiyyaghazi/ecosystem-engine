@@ -15,8 +15,8 @@ import (
 
 type ServiceUsecase interface {
 	Create(ctx context.Context, req dto.CreateServiceRequest) (*dto.ServiceResponse, error)
-	GetAll(ctx context.Context) ([]dto.ServiceResponse, error)
-	GetByID(ctx context.Context, id string) (*dto.ServiceResponse, error)
+	GetAll(ctx context.Context) ([]dto.ServiceResponse, context.Context, error)
+	GetByID(ctx context.Context, id string) (*dto.ServiceResponse, context.Context, error)
 	Update(ctx context.Context, id string, req dto.UpdateServiceRequest) (*dto.ServiceResponse, error)
 	Delete(ctx context.Context, id string) error
 }
@@ -45,10 +45,10 @@ func (u *serviceUsecase) Create(ctx context.Context, req dto.CreateServiceReques
 	return u.toResponse(s), nil
 }
 
-func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, error) {
-	services, err := u.repo.GetAll(ctx)
+func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, context.Context, error) {
+	services, ctx, err := u.repo.GetAll(ctx)
 	if err != nil {
-		return nil, err
+		return nil, ctx, err
 	}
 
 	var res []dto.ServiceResponse
@@ -56,19 +56,19 @@ func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, err
 		res = append(res, *u.toResponse(&s))
 	}
 
-	return res, nil
+	return res, ctx, nil
 }
 
-func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceResponse, error) {
-	s, err := u.repo.GetByID(ctx, id)
+func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceResponse, context.Context, error) {
+	s, ctx, err := u.repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, apperror.ErrNotFound
+			return nil, ctx, apperror.ErrNotFound
 		}
-		return nil, err
+		return nil, ctx, err
 	}
 
-	return u.toResponse(s), nil
+	return u.toResponse(s), ctx, nil
 }
 
 func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateServiceRequest) (*dto.ServiceResponse, error) {
@@ -77,7 +77,7 @@ func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateSe
 		return nil, apperror.ErrInvalidUUID
 	}
 
-	s, err := u.repo.GetByID(ctx, id)
+	s, _, err := u.repo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperror.ErrNotFound

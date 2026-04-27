@@ -10,12 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache/cacheutil"
 )
 
 type ServiceRepository interface {
 	Create(ctx context.Context, service *entity.Service) error
-	GetAll(ctx context.Context) ([]entity.Service, error)
-	GetByID(ctx context.Context, id string) (*entity.Service, error)
+	GetAll(ctx context.Context) ([]entity.Service, context.Context, error)
+	GetByID(ctx context.Context, id string) (*entity.Service, context.Context, error)
 	Update(ctx context.Context, service *entity.Service) error
 	Delete(ctx context.Context, id string) error
 	InvalidateCache(ctx context.Context, id string)
@@ -50,13 +51,13 @@ func (r *serviceRepository) Create(ctx context.Context, s *entity.Service) error
 	return nil
 }
 
-func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error) {
+func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, context.Context, error) {
 	val, err := r.redis.Get(ctx, cacheKeyAll).Result()
 	if err == nil {
 		var services []entity.Service
 		if err := json.Unmarshal([]byte(val), &services); err == nil {
 			slog.DebugContext(ctx, "Cache HIT", "key", cacheKeyAll)
-			return services, nil
+			return services, cacheutil.WithCacheStatus(ctx, cacheutil.StatusHIT), nil
 		}
 	}
 
@@ -65,7 +66,7 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 	query := `SELECT id, name, description, price, created_at, updated_at FROM services ORDER BY created_at DESC`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, ctx, err
 	}
 	defer rows.Close()
 
@@ -73,7 +74,7 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 	for rows.Next() {
 		var s entity.Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Description, &s.Price, &s.CreatedAt, &s.UpdatedAt); err != nil {
-			return nil, err
+			return nil, ctx, err
 		}
 		services = append(services, s)
 	}
@@ -82,10 +83,10 @@ func (r *serviceRepository) GetAll(ctx context.Context) ([]entity.Service, error
 		r.redis.Set(ctx, cacheKeyAll, data, cacheTTL)
 	}
 
-	return services, nil
+	return services, cacheutil.WithCacheStatus(ctx, cacheutil.StatusMISS), nil
 }
 
-func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Service, error) {
+func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Service, context.Context, error) {
 	key := fmt.Sprintf(cacheKeyDetail, id)
 
 	val, err := r.redis.Get(ctx, key).Result()
@@ -93,7 +94,7 @@ func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Ser
 		var s entity.Service
 		if err := json.Unmarshal([]byte(val), &s); err == nil {
 			slog.DebugContext(ctx, "Cache HIT", "key", key)
-			return &s, nil
+			return &s, cacheutil.WithCacheStatus(ctx, cacheutil.StatusHIT), nil
 		}
 	}
 
@@ -103,14 +104,14 @@ func (r *serviceRepository) GetByID(ctx context.Context, id string) (*entity.Ser
 	query := `SELECT id, name, description, price, created_at, updated_at FROM services WHERE id = $1`
 	err = r.db.QueryRow(ctx, query, id).Scan(&s.ID, &s.Name, &s.Description, &s.Price, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
-		return nil, err
+		return nil, ctx, err
 	}
 
 	if data, err := json.Marshal(s); err == nil {
 		r.redis.Set(ctx, key, data, cacheTTL)
 	}
 
-	return &s, nil
+	return &s, cacheutil.WithCacheStatus(ctx, cacheutil.StatusMISS), nil
 }
 
 func (r *serviceRepository) Update(ctx context.Context, s *entity.Service) error {

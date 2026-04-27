@@ -8,6 +8,7 @@ import (
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache/cacheutil"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
@@ -49,10 +50,14 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 }
 
 func (h *ServiceHandler) GetAll(c *gin.Context) {
-	res, err := h.usecase.GetAll(c.Request.Context())
+	res, ctx, err := h.usecase.GetAll(c.Request.Context())
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
+	}
+
+	if status := cacheutil.CacheStatusFromContext(ctx); status != "" {
+		c.Header("X-Cache", status)
 	}
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "services retrieved successfully", res)
@@ -65,10 +70,14 @@ func (h *ServiceHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	res, err := h.usecase.GetByID(c.Request.Context(), id)
+	res, ctx, err := h.usecase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
+	}
+
+	if status := cacheutil.CacheStatusFromContext(ctx); status != "" {
+		c.Header("X-Cache", status)
 	}
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "service retrieved successfully", res)
