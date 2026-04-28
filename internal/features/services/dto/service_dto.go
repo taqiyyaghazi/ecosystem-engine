@@ -1,11 +1,14 @@
 package dto
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 type CreateServiceRequest struct {
 	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description"`
-	Price       float64 `json:"price" binding:"required"`
+	Price       float64 `json:"price" binding:"required,gte=0"`
 }
 
 type UpdateServiceRequest struct {
@@ -18,14 +21,22 @@ func (r *UpdateServiceRequest) Validate() error {
 	if r.Name == nil && r.Description == nil && r.Price == nil {
 		return errors.New("at least one field must be provided")
 	}
+
+	if r.Price != nil && *r.Price < 0 {
+		return errors.New("price cannot be negative")
+	}
+
+	if r.Name != nil && *r.Name == "" {
+		return errors.New("name cannot be empty")
+	}
 	return nil
 }
 
 type ServiceResponse struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Price       float64   `json:"price"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

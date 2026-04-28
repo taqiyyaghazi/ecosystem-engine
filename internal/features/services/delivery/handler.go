@@ -4,11 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache/cacheutil"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
@@ -36,7 +34,7 @@ func (h *ServiceHandler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *ServiceHandler) Create(c *gin.Context) {
 	var req dto.CreateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidInput)
+		httputil.HandleError(c, apperror.NewInvalidInputError(err))
 		return
 	}
 
@@ -50,54 +48,48 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 }
 
 func (h *ServiceHandler) GetAll(c *gin.Context) {
-	res, ctx, err := h.usecase.GetAll(c.Request.Context())
+	res, cacheStatus, err := h.usecase.GetAll(c.Request.Context())
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
 	}
 
-	if status := cacheutil.CacheStatusFromContext(ctx); status != "" {
-		c.Header("X-Cache", status)
-	}
+	httputil.SetCacheHeader(c, cacheStatus)
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "services retrieved successfully", res)
 }
 
 func (h *ServiceHandler) GetByID(c *gin.Context) {
-	id := c.Param("id")
-	if _, err := uuid.Parse(id); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidUUID)
+	id, ok := httputil.GetUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
-	res, ctx, err := h.usecase.GetByID(c.Request.Context(), id)
+	res, cacheStatus, err := h.usecase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
 	}
 
-	if status := cacheutil.CacheStatusFromContext(ctx); status != "" {
-		c.Header("X-Cache", status)
-	}
+	httputil.SetCacheHeader(c, cacheStatus)
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "service retrieved successfully", res)
 }
 
 func (h *ServiceHandler) Update(c *gin.Context) {
-	id := c.Param("id")
-	if _, err := uuid.Parse(id); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidUUID)
+	id, ok := httputil.GetUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateServiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidInput)
+		httputil.HandleError(c, apperror.NewInvalidInputError(err))
 		return
 	}
 
 	if err := req.Validate(); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidInput)
+		httputil.HandleError(c, apperror.NewInvalidInputError(err))
 		return
 	}
 
@@ -111,9 +103,8 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 }
 
 func (h *ServiceHandler) Delete(c *gin.Context) {
-	id := c.Param("id")
-	if _, err := uuid.Parse(id); err != nil {
-		httputil.HandleError(c, apperror.ErrInvalidUUID)
+	id, ok := httputil.GetUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 

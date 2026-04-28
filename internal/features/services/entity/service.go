@@ -7,10 +7,10 @@ import (
 )
 
 type Service struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Price       float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

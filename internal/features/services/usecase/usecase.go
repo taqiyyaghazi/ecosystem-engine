@@ -2,11 +2,8 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
@@ -15,8 +12,8 @@ import (
 
 type ServiceUsecase interface {
 	Create(ctx context.Context, req dto.CreateServiceRequest) (*dto.ServiceResponse, error)
-	GetAll(ctx context.Context) ([]dto.ServiceResponse, context.Context, error)
-	GetByID(ctx context.Context, id string) (*dto.ServiceResponse, context.Context, error)
+	GetAll(ctx context.Context) ([]dto.ServiceResponse, string, error)
+	GetByID(ctx context.Context, id string) (*dto.ServiceResponse, string, error)
 	Update(ctx context.Context, id string, req dto.UpdateServiceRequest) (*dto.ServiceResponse, error)
 	Delete(ctx context.Context, id string) error
 }
@@ -45,10 +42,10 @@ func (u *serviceUsecase) Create(ctx context.Context, req dto.CreateServiceReques
 	return u.toResponse(s), nil
 }
 
-func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, context.Context, error) {
-	services, ctx, err := u.repo.GetAll(ctx)
+func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, string, error) {
+	services, cacheStatus, err := u.repo.GetAll(ctx)
 	if err != nil {
-		return nil, ctx, err
+		return nil, "", err
 	}
 
 	var res []dto.ServiceResponse
@@ -56,19 +53,16 @@ func (u *serviceUsecase) GetAll(ctx context.Context) ([]dto.ServiceResponse, con
 		res = append(res, *u.toResponse(&s))
 	}
 
-	return res, ctx, nil
+	return res, cacheStatus, nil
 }
 
-func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceResponse, context.Context, error) {
-	s, ctx, err := u.repo.GetByID(ctx, id)
+func (u *serviceUsecase) GetByID(ctx context.Context, id string) (*dto.ServiceResponse, string, error) {
+	s, cacheStatus, err := u.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ctx, apperror.ErrNotFound
-		}
-		return nil, ctx, err
+		return nil, "", err
 	}
 
-	return u.toResponse(s), ctx, nil
+	return u.toResponse(s), cacheStatus, nil
 }
 
 func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateServiceRequest) (*dto.ServiceResponse, error) {
@@ -79,9 +73,6 @@ func (u *serviceUsecase) Update(ctx context.Context, id string, req dto.UpdateSe
 
 	s, _, err := u.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, apperror.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -109,9 +100,6 @@ func (u *serviceUsecase) Delete(ctx context.Context, id string) error {
 	}
 
 	if err := u.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperror.ErrNotFound
-		}
 		return err
 	}
 
@@ -124,7 +112,7 @@ func (u *serviceUsecase) toResponse(s *entity.Service) *dto.ServiceResponse {
 		Name:        s.Name,
 		Description: s.Description,
 		Price:       s.Price,
-		CreatedAt:   s.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   s.UpdatedAt.Format(time.RFC3339),
+		CreatedAt:   s.CreatedAt,
+		UpdatedAt:   s.UpdatedAt,
 	}
 }
