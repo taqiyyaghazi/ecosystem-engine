@@ -13,14 +13,12 @@ func HandleError(c *gin.Context, err error) {
 
 	switch {
 	case errors.Is(err, apperror.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "resource not found"})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "resource not found"})
 	case errors.Is(err, apperror.ErrInvalidUUID):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
-	case errors.As(err, &invalidInput):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-	case errors.Is(err, apperror.ErrInvalidInput):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+	case errors.As(err, &invalidInput), errors.Is(err, apperror.ErrInvalidInput):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }
