@@ -1,0 +1,1118 @@
+{
+  "info": {
+    "_postman_id": "8fa604e6-01aa-452a-8800-480473632a10",
+    "name": "EcoSystemEngine",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "19829225"
+  },
+  "item": [
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "Create Service with Invalid Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const negativeScenarios = [",
+                  "    {",
+                  "        name: \"Missing 'name' field\",",
+                  "        payload: { description: \"Service tanpa nama\", price: 50000.0 }",
+                  "    },",
+                  "    {",
+                  "        name: \"Empty 'name' (Zero-value string)\",",
+                  "        payload: { name: \"\", description: \"Nama kosong string\", price: 50000.0 }",
+                  "    },",
+                  "    {",
+                  "        name: \"Missing 'price' field\",",
+                  "        payload: { name: \"Service A\", description: \"Tanpa harga\" }",
+                  "    },",
+                  "    {",
+                  "        name: \"Zero 'price' (Zero-value float64)\", ",
+                  "        payload: { name: \"Service A\", description: \"Harga nol\", price: 0 }",
+                  "    },",
+                  "    {",
+                  "        name: \"Invalid 'price' data type\",",
+                  "        payload: { name: \"Service A\", description: \"Harga string\", price: \"50000.0\" }",
+                  "    },",
+                  "    {",
+                  "        name: \"Empty JSON body\",",
+                  "        payload: {}",
+                  "    }",
+                  "];",
+                  "",
+                  "const requestUrl = pm.request.url.toString();",
+                  "const requestMethod = pm.request.method;",
+                  "",
+                  "let requestHeaders = {",
+                  "    'Content-Type': 'application/json'",
+                  "};",
+                  "const authHeader = pm.request.headers.get('Authorization');",
+                  "if (authHeader) {",
+                  "    requestHeaders['Authorization'] = authHeader;",
+                  "}",
+                  "",
+                  "negativeScenarios.forEach(scenario => {",
+                  "    const req = {",
+                  "        url: requestUrl,",
+                  "        method: requestMethod,",
+                  "        header: requestHeaders,",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify(scenario.payload)",
+                  "        }",
+                  "    };",
+                  "",
+                  "    pm.sendRequest(req, function (err, res) {",
+                  "        pm.test(`Negative Scenario: ${scenario.name}`, function () {",
+                  "            if (err) throw err;",
+                  "",
+                  "            pm.expect(res.code, \"HTTP Status harus 400\").to.eql(400);",
+                  "",
+                  "            const responseJson = res.json();",
+                  "            pm.expect(responseJson, \"Response tidak memiliki properti 'error'\").to.have.property('error');",
+                  "            pm.expect(responseJson.error, \"Pesan error tidak sesuai\").to.eql(\"invalid request body\");",
+                  "        });",
+                  "    });",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"description\": \"Invalid payload without required name\",\n    \"price\": \"10000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services"
+              ]
+            },
+            "description": "Generated from cURL: curl --request POST --url 'http://{{host}}:{{port}}/v1/services' --header 'Content-Type: application/json' --data '{\"description\":\"Invalid payload without required name\",\"price\":\"10000\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Service with Valid Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains 'data' and expected 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"service created successfully\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data object contains valid properties and data types\", function () {",
+                  "    const data = responseJson.data;",
+                  "",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "    pm.expect(data).to.have.property(\"name\");",
+                  "    pm.expect(data).to.have.property(\"description\");",
+                  "    pm.expect(data).to.have.property(\"price\");",
+                  "    pm.expect(data).to.have.property(\"created_at\");",
+                  "    pm.expect(data).to.have.property(\"updated_at\");",
+                  "",
+                  "    pm.expect(data.id).to.be.a(\"string\");",
+                  "    pm.expect(data.name).to.be.a(\"string\");",
+                  "    pm.expect(data.description).to.be.a(\"string\");",
+                  "    pm.expect(data.price).to.be.a(\"number\");",
+                  "    pm.expect(data.created_at).to.be.a(\"string\");",
+                  "    pm.expect(data.updated_at).to.be.a(\"string\");",
+                  "",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(data.id, \"Format ID harus berupa UUID\").to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "pm.test(\"Returned data matches the sent request payload\", function () {",
+                  "    const requestPayload = JSON.parse(pm.request.body.raw);",
+                  "    const data = responseJson.data;",
+                  "",
+                  "    pm.expect(data.name).to.eql(requestPayload.name);",
+                  "    pm.expect(data.price).to.eql(requestPayload.price);",
+                  "    ",
+                  "    if (requestPayload.description !== undefined) {",
+                  "        pm.expect(data.description).to.eql(requestPayload.description);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"Save Service ID to Environment\", function () {",
+                  "    const serviceId = responseJson.data.id;",
+                  "    ",
+                  "    pm.expect(serviceId).to.not.be.undefined;",
+                  "    ",
+                  "    pm.environment.set(\"serviceId\", serviceId);",
+                  "    ",
+                  "    console.log(\"ID berhasil disimpan ke environment: \", serviceId);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Valid Service\",\n    \"description\": \"Service description\",\n    \"price\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services"
+              ]
+            },
+            "description": "Generated from cURL: curl --request POST --url 'http://{{host}}:{{port}}/v1/services' --header 'Content-Type: application/json' --data '{\"name\":\"Valid Service\",\"description\":\"Service description\",\"price\":10000}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Header X-Cache is present and equals 'MISS'\", function () {",
+                  "    pm.response.to.have.header(\"X-Cache\", \"MISS\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response has 'data' array and correct 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"services retrieved successfully\");",
+                  "    ",
+                  "    pm.expect(responseJson.data).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "pm.test(\"All items in 'data' array match the expected schema and data types\", function () {",
+                  "    const dataArray = responseJson.data;",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "",
+                  "    if (dataArray.length > 0) {",
+                  "        dataArray.forEach((item, index) => {",
+                  "            pm.expect(item, `Missing 'id' at index ${index}`).to.have.property(\"id\");",
+                  "            pm.expect(item, `Missing 'name' at index ${index}`).to.have.property(\"name\");",
+                  "            pm.expect(item, `Missing 'description' at index ${index}`).to.have.property(\"description\");",
+                  "            pm.expect(item, `Missing 'price' at index ${index}`).to.have.property(\"price\");",
+                  "            pm.expect(item, `Missing 'created_at' at index ${index}`).to.have.property(\"created_at\");",
+                  "            pm.expect(item, `Missing 'updated_at' at index ${index}`).to.have.property(\"updated_at\");",
+                  "",
+                  "            pm.expect(item.id).to.be.a(\"string\");",
+                  "            pm.expect(item.name).to.be.a(\"string\");",
+                  "            pm.expect(item.description).to.be.a(\"string\");",
+                  "            pm.expect(item.price).to.be.a(\"number\");",
+                  "            pm.expect(item.created_at).to.be.a(\"string\");",
+                  "            pm.expect(item.updated_at).to.be.a(\"string\");",
+                  "",
+                  "            pm.expect(item.id, `Invalid UUID format at index ${index}`).to.match(uuidRegex);",
+                  "        });",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Services from Cache",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Header X-Cache is present and equals 'HIT'\", function () {",
+                  "    pm.response.to.have.header(\"X-Cache\", \"HIT\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response has 'data' array and correct 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"services retrieved successfully\");",
+                  "    ",
+                  "    pm.expect(responseJson.data).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "pm.test(\"All items in 'data' array match the expected schema and data types\", function () {",
+                  "    const dataArray = responseJson.data;",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "",
+                  "    if (dataArray.length > 0) {",
+                  "        dataArray.forEach((item, index) => {",
+                  "            pm.expect(item, `Missing 'id' at index ${index}`).to.have.property(\"id\");",
+                  "            pm.expect(item, `Missing 'name' at index ${index}`).to.have.property(\"name\");",
+                  "            pm.expect(item, `Missing 'description' at index ${index}`).to.have.property(\"description\");",
+                  "            pm.expect(item, `Missing 'price' at index ${index}`).to.have.property(\"price\");",
+                  "            pm.expect(item, `Missing 'created_at' at index ${index}`).to.have.property(\"created_at\");",
+                  "            pm.expect(item, `Missing 'updated_at' at index ${index}`).to.have.property(\"updated_at\");",
+                  "",
+                  "            pm.expect(item.id).to.be.a(\"string\");",
+                  "            pm.expect(item.name).to.be.a(\"string\");",
+                  "            pm.expect(item.description).to.be.a(\"string\");",
+                  "            pm.expect(item.price).to.be.a(\"number\");",
+                  "            pm.expect(item.created_at).to.be.a(\"string\");",
+                  "            pm.expect(item.updated_at).to.be.a(\"string\");",
+                  "",
+                  "            pm.expect(item.id, `Invalid UUID format at index ${index}`).to.match(uuidRegex);",
+                  "        });",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service with Invalid Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const urlString = pm.request.url.toString();",
+                  "const baseUrl = urlString.substring(0, urlString.lastIndexOf('/'));",
+                  "",
+                  "let requestHeaders = {",
+                  "    'Content-Type': 'application/json'",
+                  "};",
+                  "const authHeader = pm.request.headers.get('Authorization');",
+                  "if (authHeader) {",
+                  "    requestHeaders['Authorization'] = authHeader;",
+                  "}",
+                  "",
+                  "const negativeScenarios = [",
+                  "    {",
+                  "        name: \"Case 1: Invalid ID Format (Bukan UUID)\",",
+                  "        testId: \"bukan-format-uuid-123\",",
+                  "        expectedStatus: 400,",
+                  "        expectedError: \"invalid ID format\"",
+                  "    },",
+                  "    {",
+                  "        name: \"Case 2: ID UUID Valid tapi tidak ditemukan (Not Found)\",",
+                  "        testId: \"00000000-0000-0000-0000-000000000000\",",
+                  "        expectedStatus: 404,",
+                  "        expectedError: \"resource not found\"",
+                  "    }",
+                  "];",
+                  "",
+                  "negativeScenarios.forEach(scenario => {",
+                  "    const req = {",
+                  "        url: `${baseUrl}/${scenario.testId}`,",
+                  "        method: 'GET',",
+                  "        header: requestHeaders",
+                  "    };",
+                  "",
+                  "    pm.sendRequest(req, function (err, res) {",
+                  "        pm.test(`${scenario.name}`, function () {",
+                  "            if (err) throw err;",
+                  "",
+                  "            pm.expect(res.code, `HTTP Status harus ${scenario.expectedStatus}`).to.eql(scenario.expectedStatus);",
+                  "",
+                  "            const responseJson = res.json();",
+                  "            pm.expect(responseJson, \"Response harus memiliki properti 'error'\").to.have.property('error');",
+                  "            pm.expect(responseJson.error, \"Pesan error tidak sesuai ekspektasi\").to.eql(scenario.expectedError);",
+                  "        });",
+                  "    });",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/xxx",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "xxx"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Detail Service with Valid Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Header X-Cache is present and equals 'MISS'\", function () {",
+                  "    pm.response.to.have.header(\"X-Cache\", \"MISS\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains 'data' and expected 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"service retrieved successfully\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data object contains valid properties and data types\", function () {",
+                  "    const data = responseJson.data;",
+                  "",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "    pm.expect(data).to.have.property(\"name\");",
+                  "    pm.expect(data).to.have.property(\"description\");",
+                  "    pm.expect(data).to.have.property(\"price\");",
+                  "    pm.expect(data).to.have.property(\"created_at\");",
+                  "    pm.expect(data).to.have.property(\"updated_at\");",
+                  "",
+                  "    pm.expect(data.id).to.be.a(\"string\");",
+                  "    pm.expect(data.name).to.be.a(\"string\");",
+                  "    pm.expect(data.description).to.be.a(\"string\");",
+                  "    pm.expect(data.price).to.be.a(\"number\");",
+                  "    pm.expect(data.created_at).to.be.a(\"string\");",
+                  "    pm.expect(data.updated_at).to.be.a(\"string\");",
+                  "",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(data.id, \"Format ID harus berupa UUID\").to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "pm.test(\"Returned ID matches the requested service_id from environment\", function () {",
+                  "    const expectedId = pm.environment.get(\"service_id\");",
+                  "    ",
+                  "    if (expectedId) {",
+                  "        pm.expect(responseJson.data.id).to.eql(expectedId);",
+                  "    } else {",
+                  "        console.warn(\"Variable 'service_id' tidak ditemukan di environment. Melewati validasi pencocokan ID.\");",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/{{serviceId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Detail Service with Valid Id from Cache",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Header X-Cache is present and equals 'HIT'\", function () {",
+                  "    pm.response.to.have.header(\"X-Cache\", \"HIT\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains 'data' and expected 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"service retrieved successfully\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data object contains valid properties and data types\", function () {",
+                  "    const data = responseJson.data;",
+                  "",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "    pm.expect(data).to.have.property(\"name\");",
+                  "    pm.expect(data).to.have.property(\"description\");",
+                  "    pm.expect(data).to.have.property(\"price\");",
+                  "    pm.expect(data).to.have.property(\"created_at\");",
+                  "    pm.expect(data).to.have.property(\"updated_at\");",
+                  "",
+                  "    pm.expect(data.id).to.be.a(\"string\");",
+                  "    pm.expect(data.name).to.be.a(\"string\");",
+                  "    pm.expect(data.description).to.be.a(\"string\");",
+                  "    pm.expect(data.price).to.be.a(\"number\");",
+                  "    pm.expect(data.created_at).to.be.a(\"string\");",
+                  "    pm.expect(data.updated_at).to.be.a(\"string\");",
+                  "",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(data.id, \"Format ID harus berupa UUID\").to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "pm.test(\"Returned ID matches the requested service_id from environment\", function () {",
+                  "    const expectedId = pm.environment.get(\"service_id\");",
+                  "    ",
+                  "    if (expectedId) {",
+                  "        pm.expect(responseJson.data.id).to.eql(expectedId);",
+                  "    } else {",
+                  "        console.warn(\"Variable 'service_id' tidak ditemukan di environment. Melewati validasi pencocokan ID.\");",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/{{serviceId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Service with Invalid Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const urlString = pm.request.url.toString();",
+                  "const baseUrl = urlString.substring(0, urlString.lastIndexOf('/'));",
+                  "",
+                  "let requestHeaders = {",
+                  "    'Content-Type': 'application/json'",
+                  "};",
+                  "const authHeader = pm.request.headers.get('Authorization');",
+                  "if (authHeader) {",
+                  "    requestHeaders['Authorization'] = authHeader;",
+                  "}",
+                  "",
+                  "const currentRequestBody = pm.request.body && pm.request.body.raw ? pm.request.body.raw : \"{}\";",
+                  "",
+                  "const negativeScenarios = [",
+                  "    {",
+                  "        name: \"Case 1: Invalid ID Format (Bukan UUID)\",",
+                  "        testId: \"bukan-format-uuid-123\",",
+                  "        expectedStatus: 400,",
+                  "        expectedError: \"invalid ID format\",",
+                  "    },",
+                  "    {",
+                  "        name: \"Case 2: ID UUID Valid tapi tidak ditemukan (Not Found)\",",
+                  "        testId: \"00000000-0000-0000-0000-000000000000\", // UUID valid acak",
+                  "        expectedStatus: 404, ",
+                  "        expectedError: \"resource not found\" ",
+                  "    }",
+                  "];",
+                  "",
+                  "negativeScenarios.forEach(scenario => {",
+                  "    const req = {",
+                  "        url: `${baseUrl}/${scenario.testId}`,",
+                  "        method: 'PUT',",
+                  "        header: requestHeaders,",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: currentRequestBody",
+                  "        }",
+                  "    };",
+                  "",
+                  "    pm.sendRequest(req, function (err, res) {",
+                  "        pm.test(`${scenario.name}`, function () {",
+                  "            if (err) throw err;",
+                  "",
+                  "            pm.expect(res.code, `HTTP Status harus ${scenario.expectedStatus}`).to.eql(scenario.expectedStatus);",
+                  "",
+                  "            const responseJson = res.json();",
+                  "            pm.expect(responseJson, \"Response harus memiliki properti 'error'\").to.have.property('error');",
+                  "            pm.expect(responseJson.error, \"Pesan error tidak sesuai ekspektasi\").to.eql(scenario.expectedError);",
+                  "        });",
+                  "    });",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Valid Service Edited\",\n    \"description\": \"Service description edited\",\n    \"price\": 12000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/xxx",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "xxx"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Service with Invalid Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const requestUrl = pm.request.url.toString();",
+                  "const requestMethod = pm.request.method;",
+                  "",
+                  "let requestHeaders = {",
+                  "    'Content-Type': 'application/json'",
+                  "};",
+                  "const authHeader = pm.request.headers.get('Authorization');",
+                  "if (authHeader) {",
+                  "    requestHeaders['Authorization'] = authHeader;",
+                  "}",
+                  "",
+                  "const negativeScenarios = [",
+                  "    {",
+                  "        name: \"Invalid 'price' data type (String instead of Float)\",",
+                  "        payload: { price: \"lima puluh ribu\" }",
+                  "    },",
+                  "    {",
+                  "        name: \"Invalid 'name' data type (Number instead of String)\",",
+                  "        payload: { name: 12345 }",
+                  "    },",
+                  "    {",
+                  "        name: \"Invalid 'description' data type (Boolean instead of String)\",",
+                  "        payload: { description: true }",
+                  "    },",
+                  "    {",
+                  "        name: \"Multiple Invalid Types\",",
+                  "        payload: { name: 123, price: \"10000\", description: [\"array\"] } ",
+                  "    }",
+                  "];",
+                  "",
+                  "negativeScenarios.forEach(scenario => {",
+                  "    const req = {",
+                  "        url: requestUrl,",
+                  "        method: requestMethod,",
+                  "        header: requestHeaders,",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify(scenario.payload)",
+                  "        }",
+                  "    };",
+                  "",
+                  "    pm.sendRequest(req, function (err, res) {",
+                  "        pm.test(`${scenario.name}`, function () {",
+                  "            if (err) throw err;",
+                  "",
+                  "            pm.expect(res.code, \"HTTP Status harus 400\").to.eql(400);",
+                  "",
+                  "            const responseJson = res.json();",
+                  "            pm.expect(responseJson, \"Response harus memiliki properti 'error'\").to.have.property('error');",
+                  "            pm.expect(responseJson.error, \"Pesan error tidak sesuai\").to.eql(\"invalid request body\");",
+                  "        });",
+                  "    });",
+                  "});",
+                  "",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/{{serviceId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Service with Valid Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseJson = pm.response.json();",
+                  "",
+                  "pm.test(\"HTTP Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains 'data' and expected 'message'\", function () {",
+                  "    pm.expect(responseJson).to.have.property(\"data\");",
+                  "    pm.expect(responseJson).to.have.property(\"message\");",
+                  "    pm.expect(responseJson.message).to.eql(\"service updated successfully\");",
+                  "});",
+                  "",
+                  "pm.test(\"Data object contains valid properties and data types\", function () {",
+                  "    const data = responseJson.data;",
+                  "",
+                  "    pm.expect(data).to.have.property(\"id\");",
+                  "    pm.expect(data).to.have.property(\"name\");",
+                  "    pm.expect(data).to.have.property(\"description\");",
+                  "    pm.expect(data).to.have.property(\"price\");",
+                  "    pm.expect(data).to.have.property(\"created_at\");",
+                  "    pm.expect(data).to.have.property(\"updated_at\");",
+                  "",
+                  "    pm.expect(data.id).to.be.a(\"string\");",
+                  "    pm.expect(data.name).to.be.a(\"string\");",
+                  "    pm.expect(data.description).to.be.a(\"string\");",
+                  "    pm.expect(data.price).to.be.a(\"number\");",
+                  "    pm.expect(data.created_at).to.be.a(\"string\");",
+                  "    pm.expect(data.updated_at).to.be.a(\"string\");",
+                  "",
+                  "    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(data.id, \"Format ID harus berupa UUID\").to.match(uuidRegex);",
+                  "});",
+                  "",
+                  "pm.test(\"Returned data matches the sent update payload\", function () {",
+                  "    const data = responseJson.data;",
+                  "    ",
+                  "    const requestRaw = pm.request.body && pm.request.body.raw ? pm.request.body.raw : \"{}\";",
+                  "    const requestPayload = JSON.parse(requestRaw);",
+                  "",
+                  "    if (requestPayload.name !== undefined) {",
+                  "        pm.expect(data.name, \"Nama tidak terupdate sesuai payload\").to.eql(requestPayload.name);",
+                  "    }",
+                  "    ",
+                  "    if (requestPayload.description !== undefined) {",
+                  "        pm.expect(data.description, \"Deskripsi tidak terupdate sesuai payload\").to.eql(requestPayload.description);",
+                  "    }",
+                  "    ",
+                  "    if (requestPayload.price !== undefined) {",
+                  "        pm.expect(data.price, \"Harga tidak terupdate sesuai payload\").to.eql(requestPayload.price);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"Returned ID matches the requested service_id from environment\", function () {",
+                  "    const expectedId = pm.environment.get(\"service_id\");",
+                  "    ",
+                  "    if (expectedId) {",
+                  "        pm.expect(responseJson.data.id, \"ID tidak boleh berubah setelah diupdate\").to.eql(expectedId);",
+                  "    } else {",
+                  "        console.warn(\"Variable 'service_id' tidak ditemukan di environment. Melewati validasi pencocokan ID.\");",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Valid Service Edited\",\n    \"description\": \"Service description edited\",\n    \"price\": 12000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/{{serviceId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Service with Invalid Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const urlString = pm.request.url.toString();",
+                  "const baseUrl = urlString.substring(0, urlString.lastIndexOf('/'));",
+                  "",
+                  "let requestHeaders = {",
+                  "    'Content-Type': 'application/json'",
+                  "};",
+                  "const authHeader = pm.request.headers.get('Authorization');",
+                  "if (authHeader) {",
+                  "    requestHeaders['Authorization'] = authHeader;",
+                  "}",
+                  "",
+                  "const negativeScenarios = [",
+                  "    {",
+                  "        name: \"Case 1: Invalid ID Format (Bukan UUID)\",",
+                  "        testId: \"bukan-format-uuid-123\",",
+                  "        expectedStatus: 400,",
+                  "        expectedError: \"invalid ID format\",",
+                  "    },",
+                  "    {",
+                  "        name: \"Case 2: ID UUID Valid tapi tidak ditemukan (Not Found)\",",
+                  "        testId: \"00000000-0000-0000-0000-000000000000\",",
+                  "        expectedStatus: 404, ",
+                  "        expectedError: \"resource not found\" ",
+                  "    }",
+                  "];",
+                  "",
+                  "negativeScenarios.forEach(scenario => {",
+                  "    const req = {",
+                  "        url: `${baseUrl}/${scenario.testId}`,",
+                  "        method: 'DELETE',",
+                  "        header: requestHeaders",
+                  "    };",
+                  "",
+                  "    pm.sendRequest(req, function (err, res) {",
+                  "        pm.test(`${scenario.name}`, function () {",
+                  "            if (err) throw err;",
+                  "",
+                  "            pm.expect(res.code, `HTTP Status harus ${scenario.expectedStatus}`).to.eql(scenario.expectedStatus);",
+                  "",
+                  "            const responseJson = res.json();",
+                  "            pm.expect(responseJson, \"Response harus memiliki properti 'error'\").to.have.property('error');",
+                  "            pm.expect(responseJson.error, \"Pesan error tidak sesuai ekspektasi\").to.eql(scenario.expectedError);",
+                  "        });",
+                  "    });",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/xxx",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "xxx"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Service with Valid Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let responseJson = {};",
+                  "try {",
+                  "    responseJson = pm.response.json();",
+                  "} catch (e) {",
+                  "",
+                  "}",
+                  "",
+                  "",
+                  "pm.test(\"HTTP Status is 204 No Content\", function () {",
+                  "    pm.expect(pm.response.code).to.eql(204);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200 && Object.keys(responseJson).length > 0) {",
+                  "    pm.test(\"Response contains expected 'message'\", function () {",
+                  "        pm.expect(responseJson).to.have.property(\"message\");",
+                  "        ",
+                  "        pm.expect(responseJson.message).to.eql(\"service deleted successfully\");",
+                  "    });",
+                  "}",
+                  "",
+                  "pm.test(\"Response does not contain error\", function () {",
+                  "    pm.expect(responseJson).to.not.have.property(\"error\");",
+                  "});",
+                  "",
+                  "pm.test(\"Clean up 'service_id' from environment\", function () {",
+                  "    pm.environment.unset(\"service_id\");",
+                  "    console.log(\"Environment variable 'service_id' telah dihapus.\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": false
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/v1/services/{{serviceId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "v1",
+                "services",
+                "{{serviceId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
