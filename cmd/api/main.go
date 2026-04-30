@@ -12,9 +12,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
+	authDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/delivery"
+	authRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/repository"
+	authUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/usecase"
+	svcDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
+	svcRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
+	svcUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/config"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
@@ -67,11 +70,19 @@ func run() error {
 		slog.Info("Redis connection closed")
 	}()
 
-	serviceRepo := repository.NewServiceRepository(dbPool, rdb)
-	serviceUsecase := usecase.NewServiceUsecase(serviceRepo)
-	serviceHandler := delivery.NewServiceHandler(serviceUsecase)
+	// Services feature (Phase 1)
+	serviceRepo := svcRepository.NewServiceRepository(dbPool, rdb)
+	serviceUsecase := svcUsecase.NewServiceUsecase(serviceRepo)
+	serviceHandler := svcDelivery.NewServiceHandler(serviceUsecase)
 
-	router := setupRouter(cfg.AppEnv, serviceHandler)
+	// Auth feature (Phase 2)
+	userRepo := authRepository.NewUserRepository(dbPool)
+	sessionRepo := authRepository.NewSessionRepository(rdb)
+	authUC := authUsecase.NewAuthUsecase(userRepo, sessionRepo)
+	authHandler := authDelivery.NewAuthHandler(authUC)
+	authMiddleware := authDelivery.RequireAuth(authUC)
+
+	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -118,7 +129,12 @@ func setupLogger(env string) {
 	slog.SetDefault(slog.New(handler))
 }
 
-func setupRouter(env string, serviceHandler *delivery.ServiceHandler) *gin.Engine {
+func setupRouter(
+	env string,
+	serviceHandler *svcDelivery.ServiceHandler,
+	authHandler *authDelivery.AuthHandler,
+	authMiddleware gin.HandlerFunc,
+) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -134,7 +150,11 @@ func setupRouter(env string, serviceHandler *delivery.ServiceHandler) *gin.Engin
 
 	v1 := r.Group("/v1")
 	{
-		serviceHandler.RegisterRoutes(v1)
+		authHandler.RegisterRoutes(v1)
+
+		// Services routes are protected by session middleware (Phase 2 requirement)
+		protected := v1.Group("", authMiddleware)
+		serviceHandler.RegisterRoutes(protected)
 	}
 
 	return r

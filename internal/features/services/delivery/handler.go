@@ -33,8 +33,7 @@ func (h *ServiceHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 func (h *ServiceHandler) Create(c *gin.Context) {
 	var req dto.CreateServiceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httputil.HandleError(c, apperror.NewInvalidInputError(err))
+	if !httputil.BindJSON(c, &req) {
 		return
 	}
 
@@ -83,8 +82,7 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 	}
 
 	var req dto.UpdateServiceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httputil.HandleError(c, apperror.NewInvalidInputError(err))
+	if !httputil.BindJSON(c, &req) {
 		return
 	}
 

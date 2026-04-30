@@ -9,6 +9,7 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrInvalidUUID  = errors.New("invalid UUID")
 	ErrInvalidInput = errors.New("invalid input")
+	ErrUnauthorized = errors.New("unauthorized")
 )
 
 type InvalidInputError struct {

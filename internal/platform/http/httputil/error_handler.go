@@ -9,14 +9,26 @@ import (
 )
 
 func HandleError(c *gin.Context, err error) {
-	var invalidInput *apperror.InvalidInputError
+	var (
+		validationErr *apperror.ValidationError
+		invalidInput  *apperror.InvalidInputError
+	)
 
 	switch {
+	case errors.Is(err, apperror.ErrUnauthorized):
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 	case errors.Is(err, apperror.ErrNotFound):
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "resource not found"})
 	case errors.Is(err, apperror.ErrInvalidUUID):
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
-	case errors.As(err, &invalidInput), errors.Is(err, apperror.ErrInvalidInput):
+	case errors.As(err, &validationErr):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error":   "validation failed",
+			"details": validationErr.Fields,
+		})
+	case errors.As(err, &invalidInput):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": invalidInput.Error()})
+	case errors.Is(err, apperror.ErrInvalidInput):
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 	default:
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
