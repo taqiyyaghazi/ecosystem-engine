@@ -1,0 +1,39 @@
+# Tasks - Security and Session Management (Phase 2)
+
+- [ ] Database & Migrations
+    - [ ] Create `migrations/202604300002_create_users_table.sql`
+    - [ ] Run migrations
+- [ ] Auth Feature Slice - Structure
+    - [ ] Create `internal/features/auth/` directory structure (`delivery/`, `repository/`, `usecase/`, `dto/`)
+- [ ] Auth Feature Slice - Entity & DTO
+    - [ ] Create `internal/features/auth/entity/user.go` (User entity)
+    - [ ] Create `internal/features/auth/dto/auth_dto.go` (`RegisterRequest`, `LoginRequest`, `SessionResponse`)
+- [ ] Auth Feature Slice - Repository
+    - [ ] Create `internal/features/auth/repository/user_repository.go` (Postgres: `CreateUser`, `FindByUsername`)
+    - [ ] Create `internal/features/auth/repository/session_repository.go` (Redis Hash: `CreateSession`, `GetSession`, `DeleteSession`)
+- [ ] Auth Feature Slice - Usecase
+    - [ ] Create `internal/features/auth/usecase/usecase.go`
+    - [ ] Implement `Register` (hash password with bcrypt, save to Postgres)
+    - [ ] Implement `Login` (verify credentials, generate session UUID, store to Redis Hash with TTL 24h, return session ID)
+    - [ ] Implement `Logout` (delete session key from Redis via `DEL`)
+    - [ ] Implement `Me` (fetch session data from Redis via `HGETALL`)
+- [ ] Auth Feature Slice - Delivery
+    - [ ] Create `internal/features/auth/delivery/handler.go`
+    - [ ] Implement `POST /v1/auth/register` handler
+    - [ ] Implement `POST /v1/auth/login` handler (set Secure HttpOnly Cookie)
+    - [ ] Implement `GET /v1/auth/me` handler
+    - [ ] Implement `POST /v1/auth/logout` handler (clear cookie)
+- [ ] Auth Middleware
+    - [ ] Create `internal/features/auth/delivery/middleware.go`
+    - [ ] Read `session_id` from Cookie/Header
+    - [ ] Validate session existence in Redis (`EXISTS`)
+    - [ ] Implement Sliding Expiration (`EXPIRE session:<id> 86400`)
+    - [ ] Inject session data into Gin Context (`c.Set("user", sessionData)`)
+    - [ ] Return `401 Unauthorized` if session is missing or expired
+    - [ ] Apply middleware to existing Services endpoints (Phase 1)
+- [ ] Verification (Definition of Done)
+    - [ ] User can register (password stored as bcrypt hash in Postgres)
+    - [ ] Login returns a Session ID stored in Redis as a Hash
+    - [ ] Middleware validates session and rejects expired/deleted sessions with 401
+    - [ ] Logout permanently deletes session data from Redis
+    - [ ] All endpoints tested end-to-end
