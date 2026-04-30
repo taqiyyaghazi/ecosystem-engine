@@ -17,7 +17,7 @@ func HandleError(c *gin.Context, err error) {
 	case errors.Is(err, apperror.ErrInvalidUUID):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
 	case errors.As(err, &invalidInput):
-		c.JSON(http.StatusBadRequest, gin.H{"error": invalidInput.Err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 	case errors.Is(err, apperror.ErrInvalidInput):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 	default:

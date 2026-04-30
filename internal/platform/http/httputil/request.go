@@ -9,7 +9,7 @@ import (
 func GetUUIDParam(c *gin.Context, paramName string) (string, bool) {
 	id := c.Param(paramName)
 	if _, err := uuid.Parse(id); err != nil {
-		HandleError(c, apperror.NewInvalidInputErrorWithMessage("invalid id format"))
+		HandleError(c, apperror.ErrInvalidUUID)
 		return "", false
 	}
 	return id, true
