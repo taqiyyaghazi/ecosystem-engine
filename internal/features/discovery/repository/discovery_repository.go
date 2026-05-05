@@ -133,8 +133,8 @@ func (r *discoveryRepository) CleanupStaleLocations(ctx context.Context, beforeU
 
 	stalePartners, err := r.redis.ZRangeArgs(ctx, redis.ZRangeArgs{
 		Key:     lastSeenKey,
-		Min:     "-inf",
-		Max:     strconv.FormatInt(beforeUnix, 10),
+		Start:   "-inf",
+		Stop:    strconv.FormatInt(beforeUnix, 10),
 		ByScore: true,
 	}).Result()
 
