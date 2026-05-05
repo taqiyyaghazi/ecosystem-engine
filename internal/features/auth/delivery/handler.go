@@ -104,4 +104,3 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "logout successful", nil)
 }
-

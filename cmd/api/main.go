@@ -18,6 +18,9 @@ import (
 	discoveryDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/delivery"
 	discoveryRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/repository"
 	discoveryUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/usecase"
+	leaderboardDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/delivery"
+	leaderboardRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/repository"
+	leaderboardUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/usecase"
 	svcDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
 	svcRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
 	svcUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
@@ -97,7 +100,12 @@ func run() error {
 	// Start background worker for stale data management
 	discoveryUC.StartCleanupWorker(context.Background())
 
-	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler)
+	// Leaderboard feature (Phase 5)
+	leaderboardRepo := leaderboardRepository.NewLeaderboardRepository(dbPool, rdb)
+	leaderboardUC := leaderboardUsecase.NewLeaderboardUseCase(leaderboardRepo)
+	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUC)
+
+	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler, leaderboardHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -151,6 +159,7 @@ func setupRouter(
 	authMiddleware gin.HandlerFunc,
 	rateLimiter *ratelimit.RateLimiter,
 	discoveryHandler *discoveryDelivery.DiscoveryHandler,
+	leaderboardHandler *leaderboardDelivery.LeaderboardHandler,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -183,6 +192,9 @@ func setupRouter(
 		discoveryProtected.POST("/discovery/location", discoveryHandler.UpdateLocation)
 		discoveryProtected.POST("/discovery/offline", discoveryHandler.SetOffline)
 		v1.GET("/discovery/nearby", discoveryHandler.GetNearby)
+
+		// Leaderboard routes (Phase 5)
+		leaderboardHandler.RegisterRoutes(v1, protected)
 	}
 
 	return r

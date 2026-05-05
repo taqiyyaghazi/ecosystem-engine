@@ -112,6 +112,10 @@ func buildMessage(fe validator.FieldError) string {
 		return fmt.Sprintf("%s must be a valid email address", field)
 	case "uuid":
 		return fmt.Sprintf("%s must be a valid UUID", field)
+	case "latitude":
+		return fmt.Sprintf("%s must be a valid latitude (-90 to 90)", field)
+	case "longitude":
+		return fmt.Sprintf("%s must be a valid longitude (-180 to 180)", field)
 	case "oneof":
 		return fmt.Sprintf("%s must be one of: %s", field, fe.Param())
 	case "gt":
@@ -196,4 +200,3 @@ func friendlyTypeName(t reflect.Type) string {
 		return t.String()
 	}
 }
-

@@ -2,10 +2,8 @@ package delivery
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	authDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/dto"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
@@ -31,24 +29,10 @@ func (h *DiscoveryHandler) RegisterRoutes(r *gin.RouterGroup) {
 	}
 }
 
-// extractUserID helper securely retrieves the user ID from the Gin context session.
-func extractUserID(c *gin.Context) (string, bool) {
-	sessionData, exists := c.Get("session")
-	if !exists {
-		return "", false
-	}
-	sessionObj, ok := sessionData.(*authDto.SessionResponse)
-	if !ok {
-		return "", false
-	}
-	return sessionObj.UserID, true
-}
-
 // UpdateLocation handles POST /v1/discovery/location.
 func (h *DiscoveryHandler) UpdateLocation(c *gin.Context) {
-	userID, ok := extractUserID(c)
+	userID, ok := httputil.ExtractUserID(c)
 	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
@@ -67,9 +51,8 @@ func (h *DiscoveryHandler) UpdateLocation(c *gin.Context) {
 
 // SetOffline handles POST /v1/discovery/offline.
 func (h *DiscoveryHandler) SetOffline(c *gin.Context) {
-	userID, ok := extractUserID(c)
+	userID, ok := httputil.ExtractUserID(c)
 	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
@@ -83,47 +66,17 @@ func (h *DiscoveryHandler) SetOffline(c *gin.Context) {
 
 // GetNearby handles GET /v1/discovery/nearby
 func (h *DiscoveryHandler) GetNearby(c *gin.Context) {
-	latStr := c.Query("lat")
-	lonStr := c.Query("lon")
+	req := dto.NearbyRequest{
+		Radius: 5,
+		Unit:   "km",
+		Limit:  20,
+	}
 
-	if latStr == "" || lonStr == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "lat and lon query parameters are required"})
+	if !httputil.BindQuery(c, &req) {
 		return
 	}
 
-	lat, err := strconv.ParseFloat(latStr, 64)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "lat must be a valid float"})
-		return
-	}
-
-	lon, err := strconv.ParseFloat(lonStr, 64)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "lon must be a valid float"})
-		return
-	}
-
-	radiusStr := c.DefaultQuery("radius", "5")
-	radius, err := strconv.ParseFloat(radiusStr, 64)
-	if err != nil || radius <= 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "radius must be a positive number"})
-		return
-	}
-
-	unit := c.DefaultQuery("unit", "km")
-	if unit != "m" && unit != "km" && unit != "mi" && unit != "ft" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unit must be one of: m, km, mi, ft"})
-		return
-	}
-
-	limitStr := c.DefaultQuery("limit", "20")
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "limit must be a positive integer"})
-		return
-	}
-
-	results, err := h.usecase.GetNearby(c.Request.Context(), lat, lon, radius, unit, limit)
+	results, err := h.usecase.GetNearby(c.Request.Context(), req.Lat, req.Lon, req.Radius, req.Unit, req.Limit)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return

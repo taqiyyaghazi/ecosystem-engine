@@ -1,0 +1,48 @@
+# Tasks - Real-time Leaderboards (Phase 5)
+
+- [x] Database Migration
+    - [x] Create `migrations/202605100004_create_point_history_table.sql`
+    - [x] Define `point_history` table with `id` (UUID PK), `partner_id` (FK → partners), `amount`, `reason`, `created_at`
+    - [x] Add `-- +goose Up` and `-- +goose Down` directives
+- [x] Feature Slice Scaffold
+    - [x] Create `internal/features/leaderboard/` directory structure
+        - [x] `delivery/`   – HTTP handlers
+        - [x] `repository/` – Redis Sorted Set commands
+        - [x] `usecase/`    – Ranking logic & point calculation
+        - [x] `dto/`        – `LeaderboardResponse`, `PointRequest`
+- [x] DTO Layer
+    - [x] Define `PointRequest` struct (`PartnerID string`, `Amount int`, `Reason string`)
+    - [x] Define `LeaderboardEntry` struct (Rank, PartnerID, Score)
+    - [x] Define `LeaderboardResponse` struct (List of `LeaderboardEntry`)
+- [x] Repository Layer
+    - [x] Create `internal/features/leaderboard/repository/` implementation
+    - [x] Implement `IncrementScore` using `ZINCRBY leaderboard:partner <amount> <partner_id>`
+    - [x] Implement `GetTopRank` using `ZREVRANGE leaderboard:partner 0 <limit-1> WITHSCORES`
+    - [x] Implement `GetUserRank` using `ZREVRANK` and `ZSCORE`
+    - [x] Implement PostgreSQL repository to save `point_history`
+- [x] Use Case Layer
+    - [x] Create use case interface and implementation
+    - [x] Implement `AddPoints` logic (Atomic DB + Redis update)
+    - [x] Implement `GetLeaderboard` logic
+    - [x] Implement `GetPartnerRank` logic
+- [x] Delivery Layer
+    - [x] Create `internal/features/leaderboard/delivery/` HTTP handler file
+    - [x] Implement `POST /v1/leaderboard/points` handler
+        - [x] Parse `PointRequest`
+        - [x] Call use case `AddPoints`
+    - [x] Implement `GET /v1/leaderboard` handler
+        - [x] Parse `limit` query param (default 10)
+        - [x] Call use case `GetLeaderboard`
+    - [x] Implement `GET /v1/leaderboard/me` handler
+        - [x] Extract `partner_id` from session/token
+        - [x] Call use case `GetPartnerRank`
+- [x] Router Registration
+    - [x] Register leaderboard routes under `/v1/leaderboard` in `cmd/api/main.go`
+- [x] Verification (Definition of Done)
+    - [x] `point_history` table exists and records are saved correctly.
+    - [x] `POST /v1/leaderboard/points` updates Redis Sorted Set score.
+    - [x] `GET /v1/leaderboard` returns partners sorted by score (highest first).
+    - [x] `GET /v1/leaderboard/me` returns the correct rank (1-indexed).
+    - [x] Performance remains stable with concurrent point updates.
+    - [x] Code follows Feature Slice architecture and Go v1.26.2 standards.
+

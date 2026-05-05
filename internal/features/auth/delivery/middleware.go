@@ -40,8 +40,8 @@ func RequireAuth(uc usecase.AuthUsecase) gin.HandlerFunc {
 
 		c.Set("session_id", sessionID)
 		c.Set("session", sessionData)
+		c.Set("user_id", sessionData.UserID)
 
 		c.Next()
 	}
 }
-
