@@ -21,6 +21,7 @@ import (
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/config"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/middleware/ratelimit"
 )
 
 const (
@@ -82,7 +83,10 @@ func run() error {
 	authHandler := authDelivery.NewAuthHandler(authUC)
 	authMiddleware := authDelivery.RequireAuth(authUC)
 
-	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware)
+	// Rate Limiter (Phase 3)
+	rateLimiter := ratelimit.NewRateLimiter(rdb)
+
+	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -134,12 +138,16 @@ func setupRouter(
 	serviceHandler *svcDelivery.ServiceHandler,
 	authHandler *authDelivery.AuthHandler,
 	authMiddleware gin.HandlerFunc,
+	rateLimiter *ratelimit.RateLimiter,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.Default()
+
+	// Apply rate limiting globally (Phase 3)
+	r.Use(ratelimit.RateLimitMiddleware(rateLimiter))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

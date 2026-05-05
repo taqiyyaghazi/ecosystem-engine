@@ -1,0 +1,28 @@
+# Tasks - Traffic Control and Rate Limiting (Phase 3)
+
+- [x] Rate Limiter Structure
+    - [x] Create `internal/platform/middleware/ratelimit/` directory
+- [x] Core Rate Limiting Logic
+    - [x] Create `internal/platform/middleware/ratelimit/ratelimiter.go`
+    - [x] Implement `IsAllowed` function using Redis Fixed Window algorithm
+    - [x] Implement Atomic Increment (`INCR`)
+    - [x] Implement Expiration Logic (`EXPIRE` on first request)
+    - [x] Return allowance status and current count/remaining limit
+- [x] Gin Middleware Implementation
+    - [x] Create `internal/platform/middleware/ratelimit/middleware.go`
+    - [x] Extract Client IP using `c.ClientIP()`
+    - [x] Construct Redis key: `ratelimit:{endpoint_path}:{ip_address}`
+    - [x] Call `IsAllowed` with limit=10 and window=60s
+    - [x] Handle 429 Too Many Requests response
+    - [x] Implement standard Rate Limit headers:
+        - [x] `X-RateLimit-Limit`
+        - [x] `X-RateLimit-Remaining`
+        - [x] `X-RateLimit-Reset`
+- [x] Global Integration
+    - [x] Apply `RateLimitMiddleware` to the main router in `cmd/api/main.go`
+- [ ] Verification (Definition of Done)
+    - [ ] Middleware can be applied globally or per-route.
+    - [ ] 11th consecutive request returns `429 Too Many Requests`.
+    - [ ] Redis keys have a TTL of 60 seconds and expire correctly.
+    - [ ] Headers `X-RateLimit-*` are correctly populated in responses.
+    - [ ] Implementation uses `go-redis/v9` and is compatible with Go v1.26.2.
