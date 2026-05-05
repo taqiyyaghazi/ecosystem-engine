@@ -42,7 +42,7 @@ func ValidateJSONTypes(body []byte, target interface{}) *ValidationError {
 	}
 
 	t := reflect.TypeOf(target)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {

@@ -131,9 +131,11 @@ func (r *discoveryRepository) CleanupStaleLocations(ctx context.Context, beforeU
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	stalePartners, err := r.redis.ZRangeByScore(ctx, lastSeenKey, &redis.ZRangeBy{
-		Min: "-inf",
-		Max: strconv.FormatInt(beforeUnix, 10),
+	stalePartners, err := r.redis.ZRangeArgs(ctx, redis.ZRangeArgs{
+		Key:     lastSeenKey,
+		Min:     "-inf",
+		Max:     strconv.FormatInt(beforeUnix, 10),
+		ByScore: true,
 	}).Result()
 
 	if err != nil || len(stalePartners) == 0 {
