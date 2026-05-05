@@ -15,6 +15,9 @@ import (
 	authDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/delivery"
 	authRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/repository"
 	authUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/usecase"
+	discoveryDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/delivery"
+	discoveryRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/repository"
+	discoveryUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/usecase"
 	svcDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
 	svcRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
 	svcUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
@@ -86,7 +89,15 @@ func run() error {
 	// Rate Limiter (Phase 3)
 	rateLimiter := ratelimit.NewRateLimiter(rdb)
 
-	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter)
+	// Discovery feature (Phase 4)
+	discoveryRepo := discoveryRepository.NewDiscoveryRepository(rdb, dbPool)
+	discoveryUC := discoveryUsecase.NewDiscoveryUsecase(discoveryRepo)
+	discoveryHandler := discoveryDelivery.NewDiscoveryHandler(discoveryUC)
+
+	// Start background worker for stale data management
+	discoveryUC.StartCleanupWorker(context.Background())
+
+	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -139,6 +150,7 @@ func setupRouter(
 	authHandler *authDelivery.AuthHandler,
 	authMiddleware gin.HandlerFunc,
 	rateLimiter *ratelimit.RateLimiter,
+	discoveryHandler *discoveryDelivery.DiscoveryHandler,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -163,6 +175,14 @@ func setupRouter(
 		// Services routes are protected by session middleware (Phase 2 requirement)
 		protected := v1.Group("", authMiddleware)
 		serviceHandler.RegisterRoutes(protected)
+
+		// Discovery routes (Phase 4):
+		// POST /location requires auth to identify the partner from session.
+		// GET  /nearby is public (users searching for nearby partners).
+		discoveryProtected := v1.Group("", authMiddleware)
+		discoveryProtected.POST("/discovery/location", discoveryHandler.UpdateLocation)
+		discoveryProtected.POST("/discovery/offline", discoveryHandler.SetOffline)
+		v1.GET("/discovery/nearby", discoveryHandler.GetNearby)
 	}
 
 	return r
