@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ecosystem
+    ports:
+      - "5432:5432"
+
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
