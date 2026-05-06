@@ -10,11 +10,11 @@ import (
 )
 
 type LeaderboardHandler struct {
-	uc usecase.LeaderboardUseCase
+	leaderboardUseCase usecase.LeaderboardUseCase
 }
 
-func NewLeaderboardHandler(uc usecase.LeaderboardUseCase) *LeaderboardHandler {
-	return &LeaderboardHandler{uc: uc}
+func NewLeaderboardHandler(leaderboardUseCase usecase.LeaderboardUseCase) *LeaderboardHandler {
+	return &LeaderboardHandler{leaderboardUseCase: leaderboardUseCase}
 }
 
 func (h *LeaderboardHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
@@ -36,7 +36,7 @@ func (h *LeaderboardHandler) AddPoints(c *gin.Context) {
 		return
 	}
 
-	err := h.uc.AddPoints(c.Request.Context(), req)
+	err := h.leaderboardUseCase.AddPoints(c.Request.Context(), req)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -54,7 +54,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.GetLeaderboard(c.Request.Context(), req.ServiceID, req.Limit)
+	resp, err := h.leaderboardUseCase.GetLeaderboard(c.Request.Context(), req.ServiceID, req.Limit)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -74,7 +74,7 @@ func (h *LeaderboardHandler) GetPartnerRank(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.GetPartnerRank(c.Request.Context(), userID, query.ServiceID)
+	resp, err := h.leaderboardUseCase.GetPartnerRank(c.Request.Context(), userID, query.ServiceID)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return

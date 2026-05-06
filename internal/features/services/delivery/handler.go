@@ -11,14 +11,14 @@ import (
 )
 
 type ServiceHandler struct {
-	serviceUsecase usecase.ServiceUsecase
-	partnerUsecase usecase.PartnerUsecase
+	serviceUseCase usecase.ServiceUsecase
+	partnerUseCase usecase.PartnerUsecase
 }
 
-func NewServiceHandler(serviceUsecase usecase.ServiceUsecase, partnerUsecase usecase.PartnerUsecase) *ServiceHandler {
+func NewServiceHandler(serviceUseCase usecase.ServiceUsecase, partnerUseCase usecase.PartnerUsecase) *ServiceHandler {
 	return &ServiceHandler{
-		serviceUsecase: serviceUsecase,
-		partnerUsecase: partnerUsecase,
+		serviceUseCase: serviceUseCase,
+		partnerUseCase: partnerUseCase,
 	}
 }
 
@@ -40,7 +40,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		return
 	}
 
-	res, err := h.serviceUsecase.Create(c.Request.Context(), req)
+	res, err := h.serviceUseCase.Create(c.Request.Context(), req)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -50,7 +50,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 }
 
 func (h *ServiceHandler) GetAll(c *gin.Context) {
-	res, cacheStatus, err := h.serviceUsecase.GetAll(c.Request.Context())
+	res, cacheStatus, err := h.serviceUseCase.GetAll(c.Request.Context())
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -67,7 +67,7 @@ func (h *ServiceHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	res, cacheStatus, err := h.serviceUsecase.GetByID(c.Request.Context(), id)
+	res, cacheStatus, err := h.serviceUseCase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -94,7 +94,7 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	res, err := h.serviceUsecase.Update(c.Request.Context(), id, req)
+	res, err := h.serviceUseCase.Update(c.Request.Context(), id, req)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -109,7 +109,7 @@ func (h *ServiceHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.serviceUsecase.Delete(c.Request.Context(), id); err != nil {
+	if err := h.serviceUseCase.Delete(c.Request.Context(), id); err != nil {
 		httputil.HandleError(c, err)
 		return
 	}
@@ -128,7 +128,7 @@ func (h *ServiceHandler) JoinAsPartner(c *gin.Context) {
 		return
 	}
 
-	res, err := h.partnerUsecase.JoinAsPartner(c.Request.Context(), userID, serviceID)
+	res, err := h.partnerUseCase.JoinAsPartner(c.Request.Context(), userID, serviceID)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return

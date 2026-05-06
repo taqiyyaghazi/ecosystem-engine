@@ -21,12 +21,15 @@ import (
 	leaderboardDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/delivery"
 	leaderboardRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/repository"
 	leaderboardUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/usecase"
-	svcDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
-	svcRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
-	svcUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
+	notificationRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/repository"
+	notificationUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/usecase"
+	serviceDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
+	serviceRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
+	serviceUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/config"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
+	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/logger"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/middleware/ratelimit"
 )
 
@@ -51,7 +54,7 @@ func run() error {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
-	setupLogger(cfg.AppEnv)
+	logger.SetupLogger(cfg.AppEnv)
 
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), defaultConnTimeout)
 	defer dbCancel()
@@ -77,35 +80,39 @@ func run() error {
 		slog.Info("Redis connection closed")
 	}()
 
+	// Notifications feature (Phase 7)
+	notificationRepo := notificationRepository.NewNotificationRepository(dbPool, rdb)
+	notificationUseCase := notificationUsecase.NewNotificationUsecase(notificationRepo)
+
 	// Services feature (Phase 1)
-	serviceRepo := svcRepository.NewServiceRepository(dbPool, rdb)
-	partnerRepo := svcRepository.NewPartnerRepository(dbPool)
-	serviceUsecase := svcUsecase.NewServiceUsecase(serviceRepo)
-	partnerUsecase := svcUsecase.NewPartnerUsecase(serviceRepo, partnerRepo)
-	serviceHandler := svcDelivery.NewServiceHandler(serviceUsecase, partnerUsecase)
+	serviceRepo := serviceRepository.NewServiceRepository(dbPool, rdb)
+	partnerRepo := serviceRepository.NewPartnerRepository(dbPool)
+	serviceUseCase := serviceUsecase.NewServiceUsecase(serviceRepo)
+	partnerUseCase := serviceUsecase.NewPartnerUsecase(serviceRepo, partnerRepo, notificationUseCase)
+	serviceHandler := serviceDelivery.NewServiceHandler(serviceUseCase, partnerUseCase)
 
 	// Auth feature (Phase 2)
 	userRepo := authRepository.NewUserRepository(dbPool)
 	sessionRepo := authRepository.NewSessionRepository(rdb)
-	authUC := authUsecase.NewAuthUsecase(userRepo, sessionRepo)
-	authHandler := authDelivery.NewAuthHandler(authUC)
-	authMiddleware := authDelivery.RequireAuth(authUC)
+	authUseCase := authUsecase.NewAuthUsecase(userRepo, sessionRepo)
+	authHandler := authDelivery.NewAuthHandler(authUseCase)
+	authMiddleware := authDelivery.RequireAuth(authUseCase)
 
 	// Rate Limiter (Phase 3)
 	rateLimiter := ratelimit.NewRateLimiter(rdb)
 
 	// Discovery feature (Phase 4)
 	discoveryRepo := discoveryRepository.NewDiscoveryRepository(rdb, dbPool)
-	discoveryUC := discoveryUsecase.NewDiscoveryUsecase(discoveryRepo)
-	discoveryHandler := discoveryDelivery.NewDiscoveryHandler(discoveryUC)
+	discoveryUseCase := discoveryUsecase.NewDiscoveryUsecase(discoveryRepo)
+	discoveryHandler := discoveryDelivery.NewDiscoveryHandler(discoveryUseCase)
 
 	// Start background worker for stale data management
-	discoveryUC.StartCleanupWorker(context.Background())
+	discoveryUseCase.StartCleanupWorker(context.Background())
 
 	// Leaderboard feature (Phase 5)
 	leaderboardRepo := leaderboardRepository.NewLeaderboardRepository(dbPool, rdb)
-	leaderboardUC := leaderboardUsecase.NewLeaderboardUseCase(leaderboardRepo)
-	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUC)
+	leaderboardUseCase := leaderboardUsecase.NewLeaderboardUseCase(leaderboardRepo, notificationUseCase)
+	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUseCase)
 
 	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler, leaderboardHandler)
 
@@ -142,21 +149,11 @@ func run() error {
 	return nil
 }
 
-func setupLogger(env string) {
-	var handler slog.Handler
-	if env == "production" {
-		handler = slog.NewJSONHandler(os.Stdout, nil)
-	} else {
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		})
-	}
-	slog.SetDefault(slog.New(handler))
-}
+
 
 func setupRouter(
 	env string,
-	serviceHandler *svcDelivery.ServiceHandler,
+	serviceHandler *serviceDelivery.ServiceHandler,
 	authHandler *authDelivery.AuthHandler,
 	authMiddleware gin.HandlerFunc,
 	rateLimiter *ratelimit.RateLimiter,

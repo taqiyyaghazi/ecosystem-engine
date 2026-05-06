@@ -2,32 +2,37 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
+	notificationDTO "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/dto"
+	notificationUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/usecase"
+	serviceDTO "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
+	serviceEntity "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/entity"
+	serviceRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
 )
 
 type PartnerUsecase interface {
-	JoinAsPartner(ctx context.Context, userID string, serviceID string) (*dto.PartnerResponse, error)
+	JoinAsPartner(ctx context.Context, userID string, serviceID string) (*serviceDTO.PartnerResponse, error)
 }
 
 type partnerUsecase struct {
-	serviceRepo repository.ServiceRepository
-	partnerRepo repository.PartnerRepository
+	serviceRepository   serviceRepository.ServiceRepository
+	partnerRepository   serviceRepository.PartnerRepository
+	notificationUseCase notificationUsecase.NotificationUsecase
 }
 
-func NewPartnerUsecase(serviceRepo repository.ServiceRepository, partnerRepo repository.PartnerRepository) PartnerUsecase {
+func NewPartnerUsecase(serviceRepository serviceRepository.ServiceRepository, partnerRepository serviceRepository.PartnerRepository, notificationUseCase notificationUsecase.NotificationUsecase) PartnerUsecase {
 	return &partnerUsecase{
-		serviceRepo: serviceRepo,
-		partnerRepo: partnerRepo,
+		serviceRepository:   serviceRepository,
+		partnerRepository:   partnerRepository,
+		notificationUseCase: notificationUseCase,
 	}
 }
 
-func (u *partnerUsecase) JoinAsPartner(ctx context.Context, userID string, serviceID string) (*dto.PartnerResponse, error) {
+func (u *partnerUsecase) JoinAsPartner(ctx context.Context, userID string, serviceID string) (*serviceDTO.PartnerResponse, error) {
 	// Validate UUID format
 	uid, err := uuid.Parse(userID)
 	if err != nil {
@@ -39,32 +44,48 @@ func (u *partnerUsecase) JoinAsPartner(ctx context.Context, userID string, servi
 	}
 
 	// Validate service existence
-	_, _, err = u.serviceRepo.GetByID(ctx, serviceID)
+	_, _, err = u.serviceRepository.GetByID(ctx, serviceID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check for existing partner record
-	existingPartner, err := u.partnerRepo.GetPartnerByUserAndService(ctx, userID, serviceID)
+	existingPartner, err := u.partnerRepository.GetPartnerByUserAndService(ctx, userID, serviceID)
 	if err == nil && existingPartner != nil {
 		return nil, apperror.NewInvalidInputErrorWithMessage("user already registered as partner for this service")
 	}
 
 	// Create partner record
-	partner := &entity.Partner{
+	partner := &serviceEntity.Partner{
 		UserID:    uid,
 		ServiceID: sid,
 	}
 
-	if err := u.partnerRepo.CreatePartner(ctx, partner); err != nil {
+	if err := u.partnerRepository.CreatePartner(ctx, partner); err != nil {
 		return nil, err
 	}
 
-	return u.toResponse(partner), nil
+	res := u.toResponse(partner)
+
+	// Publish welcome notification as fire-and-forget
+	channel := "notifications:user:" + res.ID // Using Partner ID as recipient ID
+	go func() {
+		msg := notificationDTO.NotificationMessage{
+			RecipientID: res.ID,
+			Title:       "Welcome to the Program!",
+			Message:     "You have successfully joined as a partner for this service.",
+		}
+		// Use a detached background context with timeout just in case it takes time
+		if err := u.notificationUseCase.Send(context.Background(), channel, msg); err != nil {
+			slog.Error("failed to publish welcome notification", "error", err, "partner_id", res.ID)
+		}
+	}()
+
+	return res, nil
 }
 
-func (u *partnerUsecase) toResponse(p *entity.Partner) *dto.PartnerResponse {
-	return &dto.PartnerResponse{
+func (u *partnerUsecase) toResponse(p *serviceEntity.Partner) *serviceDTO.PartnerResponse {
+	return &serviceDTO.PartnerResponse{
 		ID:        p.ID.String(),
 		UserID:    p.UserID.String(),
 		ServiceID: p.ServiceID.String(),

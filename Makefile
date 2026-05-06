@@ -7,9 +7,11 @@ endif
 # Binary name
 BINARY_NAME=api
 MAIN_PATH=cmd/api/main.go
+WORKER_BINARY_NAME=worker
+WORKER_MAIN_PATH=cmd/worker/main.go
 GOOSE=$(shell which goose 2> /dev/null || echo $(shell go env GOPATH)/bin/goose)
 
-.PHONY: all build run test clean lint migrate-up migrate-down migrate-status
+.PHONY: all build run test clean lint migrate-up migrate-down migrate-status build-worker run-worker dev-worker
 
 all: build
 
@@ -23,6 +25,7 @@ run: build
 	@echo "Running application..."
 	./$(BINARY_NAME)
 
+
 ## Dev (using air for hot reload if installed):
 dev:
 	@if command -v air > /dev/null; then \
@@ -32,12 +35,31 @@ dev:
 		go run $(MAIN_PATH); \
 	fi
 
+## Build Worker:
+build-worker:
+	@echo "Building worker binary..."
+	go build -o $(WORKER_BINARY_NAME) $(WORKER_MAIN_PATH)
+
+## Run Worker:
+run-worker: build-worker
+	@echo "Running background worker..."
+	./$(WORKER_BINARY_NAME)
+
+## Dev Worker (hot reload if air installed):
+dev-worker:
+	@if command -v air > /dev/null; then \
+		air -c .air.worker.toml; \
+	else \
+		echo "Air is not installed. Running normally..."; \
+		go run $(WORKER_MAIN_PATH); \
+	fi
+
 
 ## Clean:
 clean:
 	@echo "Cleaning up..."
 	go clean
-	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME) $(WORKER_BINARY_NAME)
 
 ## Lint:
 lint:
