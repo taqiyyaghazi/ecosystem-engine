@@ -54,7 +54,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.uc.GetLeaderboard(c.Request.Context(), req.Limit)
+	resp, err := h.uc.GetLeaderboard(c.Request.Context(), req.ServiceID, req.Limit)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return
@@ -64,12 +64,17 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 }
 
 func (h *LeaderboardHandler) GetPartnerRank(c *gin.Context) {
-	partnerID, ok := httputil.ExtractUserID(c)
+	userID, ok := httputil.ExtractUserID(c)
 	if !ok {
 		return
 	}
 
-	resp, err := h.uc.GetPartnerRank(c.Request.Context(), partnerID)
+	var query dto.PartnerRankQuery
+	if !httputil.BindQuery(c, &query) {
+		return
+	}
+
+	resp, err := h.uc.GetPartnerRank(c.Request.Context(), userID, query.ServiceID)
 	if err != nil {
 		httputil.HandleError(c, err)
 		return

@@ -9,8 +9,8 @@ import (
 
 type LeaderboardUseCase interface {
 	AddPoints(ctx context.Context, req dto.PointRequest) error
-	GetLeaderboard(ctx context.Context, limit int64) (dto.LeaderboardResponse, error)
-	GetPartnerRank(ctx context.Context, partnerID string) (dto.LeaderboardEntry, error)
+	GetLeaderboard(ctx context.Context, serviceID string, limit int64) (dto.LeaderboardResponse, error)
+	GetPartnerRank(ctx context.Context, userID, serviceID string) (dto.LeaderboardEntry, error)
 }
 
 type leaderboardUseCase struct {
@@ -22,18 +22,24 @@ func NewLeaderboardUseCase(repo repository.LeaderboardRepository) LeaderboardUse
 }
 
 func (u *leaderboardUseCase) AddPoints(ctx context.Context, req dto.PointRequest) error {
-	err := u.repo.SavePointHistory(ctx, req.PartnerID, req.Amount, req.Reason)
+	serviceID, err := u.repo.GetServiceIDByPartnerID(ctx, req.PartnerID)
 	if err != nil {
 		return err
 	}
-	return u.repo.IncrementScore(ctx, req.PartnerID, float64(req.Amount))
+
+	if err := u.repo.SavePointHistory(ctx, req.PartnerID, req.Amount, req.Reason); err != nil {
+		return err
+	}
+
+	return u.repo.IncrementScore(ctx, serviceID, req.PartnerID, float64(req.Amount))
 }
 
-func (u *leaderboardUseCase) GetLeaderboard(ctx context.Context, limit int64) (dto.LeaderboardResponse, error) {
+func (u *leaderboardUseCase) GetLeaderboard(ctx context.Context, serviceID string, limit int64) (dto.LeaderboardResponse, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	results, err := u.repo.GetTopRank(ctx, limit)
+
+	results, err := u.repo.GetTopRank(ctx, serviceID, limit)
 	if err != nil {
 		return dto.LeaderboardResponse{}, err
 	}
@@ -50,8 +56,13 @@ func (u *leaderboardUseCase) GetLeaderboard(ctx context.Context, limit int64) (d
 	return dto.LeaderboardResponse{Entries: entries}, nil
 }
 
-func (u *leaderboardUseCase) GetPartnerRank(ctx context.Context, partnerID string) (dto.LeaderboardEntry, error) {
-	rank, score, err := u.repo.GetUserRank(ctx, partnerID)
+func (u *leaderboardUseCase) GetPartnerRank(ctx context.Context, userID, serviceID string) (dto.LeaderboardEntry, error) {
+	partnerID, err := u.repo.GetPartnerIDByUserAndService(ctx, userID, serviceID)
+	if err != nil {
+		return dto.LeaderboardEntry{}, err
+	}
+
+	rank, score, err := u.repo.GetUserRank(ctx, serviceID, partnerID)
 	if err != nil {
 		return dto.LeaderboardEntry{}, err
 	}

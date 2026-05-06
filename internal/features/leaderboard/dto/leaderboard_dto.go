@@ -17,5 +17,10 @@ type LeaderboardResponse struct {
 }
 
 type LeaderboardQuery struct {
-	Limit int64 `form:"limit" binding:"omitempty,gt=0"`
+	ServiceID string `form:"service_id" binding:"required,uuid"`
+	Limit     int64  `form:"limit" binding:"omitempty,gt=0"`
+}
+
+type PartnerRankQuery struct {
+	ServiceID string `form:"service_id" binding:"required,uuid"`
 }
