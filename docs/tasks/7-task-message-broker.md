@@ -1,0 +1,44 @@
+# Tasks - Message Broker (Pub/Sub) & Background Worker (Phase 7)
+
+- [ ] Database Migration
+    - [ ] Create `migrations/202605150005_create_notifications_table.sql`
+    - [ ] Define `notification_history` table with `id` (UUID PK), `recipient_id` (UUID), `title` (VARCHAR 255), `message` (TEXT), `is_read` (BOOLEAN DEFAULT false), `created_at`
+    - [ ] Add `-- +goose Up` and `-- +goose Down` directives
+- [ ] Feature Slice Scaffold
+    - [ ] Create `internal/features/notifications/` directory structure
+        - [ ] `delivery/`   – HTTP handlers (Inbox endpoint)
+        - [ ] `repository/` – Redis Pub/Sub publish & PostgreSQL persistence
+        - [ ] `usecase/`    – Subscriber loop & business logic
+        - [ ] `dto/`        – `NotificationMessage` schema
+- [ ] DTO Layer
+    - [ ] Define `NotificationMessage` struct (`RecipientID string`, `Title string`, `Message string`)
+    - [ ] Payload format must be serializable to JSON string
+- [ ] Repository Layer
+    - [ ] Create `internal/features/notifications/repository/` implementation
+    - [ ] Implement `Publish` using Redis `PUBLISH notifications:user:{id}` or `notifications:broadcast`
+    - [ ] Implement `Subscribe` to listen on a given channel pattern
+    - [ ] Implement `SaveHistory` to insert a record into `notification_history` (PostgreSQL)
+- [ ] Use Case Layer
+    - [ ] Create use case interface and implementation
+    - [ ] Implement `Send` logic — publish JSON payload to Redis channel
+    - [ ] Implement `RunSubscriberLoop` — blocking loop `for { select { ... } }` reading from Redis PubSub channel
+        - [ ] Spawn a new goroutine per received message for async processing
+        - [ ] Call `SaveHistory` inside each goroutine to persist the message
+- [ ] Background Worker Entry Point
+    - [ ] Create `cmd/worker/main.go` as a separate independent binary
+    - [ ] Initialize shared dependencies (PostgreSQL pool, Redis client)
+    - [ ] Instantiate `notifications` repository, use case
+    - [ ] Start `RunSubscriberLoop` in the main goroutine
+    - [ ] Implement Graceful Shutdown — listen for `SIGTERM` / `SIGINT`, close Redis subscription and PostgreSQL connection cleanly
+- [ ] Integration — Publisher Side (API Server)
+    - [ ] Inject `notifications` use case into **Partner Onboarding** handler (`internal/features/partner/`)
+    - [ ] After a partner is successfully registered, call `Send` to publish a welcome notification to `notifications:user:{partner_id}`
+    - [ ] Inject `notifications` use case into **Leaderboard** handler (`internal/features/leaderboard/`)
+    - [ ] After points are successfully added (`AddPoints`), call `Send` to publish a point-update notification to `notifications:user:{partner_id}`
+- [ ] Verification (Definition of Done)
+    - [ ] `notification_history` table is deployed via `goose` migration
+    - [ ] `cmd/worker` binary runs independently from `cmd/api`
+    - [ ] A message `PUBLISH`-ed from the API Server is captured by the Worker and persisted to `notification_history`
+    - [ ] Partner Welcome Notification (Phase 3 trigger) is stored correctly in the database
+    - [ ] Worker handles `SIGTERM` gracefully — active goroutines finish before shutdown
+    - [ ] Code follows Feature Slice architecture and Go v1.26.2 standards
