@@ -1,4 +1,4 @@
-# Tasks - Traffic Control and Rate Limiting (Phase 3)
+# Tasks - Traffic Control and Rate Limiting (Phase 4)
 
 - [x] Rate Limiter Structure
     - [x] Create `internal/platform/middleware/ratelimit/` directory
@@ -20,9 +20,9 @@
         - [x] `X-RateLimit-Reset`
 - [x] Global Integration
     - [x] Apply `RateLimitMiddleware` to the main router in `cmd/api/main.go`
-- [ ] Verification (Definition of Done)
-    - [ ] Middleware can be applied globally or per-route.
-    - [ ] 11th consecutive request returns `429 Too Many Requests`.
-    - [ ] Redis keys have a TTL of 60 seconds and expire correctly.
-    - [ ] Headers `X-RateLimit-*` are correctly populated in responses.
-    - [ ] Implementation uses `go-redis/v9` and is compatible with Go v1.26.2.
+- [x] Verification (Definition of Done)
+    - [x] Middleware can be applied globally or per-route.
+    - [x] 11th consecutive request returns `429 Too Many Requests`.
+    - [x] Redis keys have a TTL of 60 seconds and expire correctly.
+    - [x] Headers `X-RateLimit-*` are correctly populated in responses.
+    - [x] Implementation uses `go-redis/v9` and is compatible with Go v1.26.2.

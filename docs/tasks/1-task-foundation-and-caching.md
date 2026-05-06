@@ -1,24 +1,24 @@
 # Tasks - Foundation and Caching (Phase 1)
 
-- [ ] Project Initialization & Structure
-    - [ ] Initialize Go module
-    - [ ] Create directory structure
-    - [ ] Create `.env.example`
-- [ ] Platform Layer
-    - [ ] Implement `internal/platform/config/config.go` (using `os.Getenv`)
-    - [ ] Implement `internal/platform/database/postgres.go`
-    - [ ] Implement `internal/platform/cache/redis.go`
-- [ ] Database & Migrations
-    - [ ] Create `migrations/202604250001_create_services_table.sql`
-    - [ ] Run migrations (if possible)
-- [ ] Services Feature Slice
-    - [ ] Create `internal/features/services/entity/service.go`
-    - [ ] Create `internal/features/services/dto/service_dto.go`
-    - [ ] Create `internal/features/services/repository/repository.go`
-    - [ ] Create `internal/features/services/usecase/usecase.go`
-    - [ ] Create `internal/features/services/delivery/handler.go`
-- [ ] API Entry Point
-    - [ ] Implement `cmd/api/main.go`
-- [ ] Verification
-    - [ ] Verify CRUD endpoints
-    - [ ] Verify Redis caching logic
+- [x] Project Initialization & Structure
+    - [x] Initialize Go module
+    - [x] Create directory structure
+    - [x] Create `.env.example`
+- [x] Platform Layer
+    - [x] Implement `internal/platform/config/config.go` (using `os.Getenv`)
+    - [x] Implement `internal/platform/database/postgres.go`
+    - [x] Implement `internal/platform/cache/redis.go`
+- [x] Database & Migrations
+    - [x] Create `migrations/202604250001_create_services_table.sql`
+    - [x] Run migrations (if possible)
+- [x] Services Feature Slice
+    - [x] Create `internal/features/services/entity/service.go`
+    - [x] Create `internal/features/services/dto/service_dto.go`
+    - [x] Create `internal/features/services/repository/repository.go`
+    - [x] Create `internal/features/services/usecase/usecase.go`
+    - [x] Create `internal/features/services/delivery/handler.go`
+- [x] API Entry Point
+    - [x] Implement `cmd/api/main.go`
+- [x] Verification
+    - [x] Verify CRUD endpoints
+    - [x] Verify Redis caching logic

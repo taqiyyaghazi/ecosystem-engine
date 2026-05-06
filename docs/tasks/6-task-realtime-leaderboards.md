@@ -1,4 +1,4 @@
-# Tasks - Real-time Leaderboards (Phase 5)
+# Tasks - Real-time Leaderboards (Phase 6)
 
 - [x] Database Migration
     - [x] Create `migrations/202605100004_create_point_history_table.sql`

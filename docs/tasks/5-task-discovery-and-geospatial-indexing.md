@@ -1,0 +1,39 @@
+# Tasks - Discovery and Geospatial Indexing (Phase 5)
+
+- [x] Feature Slice Scaffold
+    - [x] Create `internal/features/discovery/` directory structure
+        - [x] `delivery/`   – HTTP handlers
+        - [x] `repository/` – Redis GEO commands
+        - [x] `usecase/`    – Distance logic & filtering
+        - [x] `dto/`        – `LocationRequest`, `NearbyPartnerResponse`
+- [x] DTO Layer
+    - [x] Define `LocationRequest` struct (`Latitude float64`, `Longitude float64`)
+    - [x] Define `NearbyPartnerResponse` struct (partner ID, distance, profile fields)
+- [x] Repository Layer
+    - [x] Create `internal/features/discovery/repository/` implementation file
+    - [x] Implement `UpdateLocation` using `GEOADD partner:locations <lon> <lat> <partner_id>`
+    - [x] Implement `GetNearby` using `GEOSEARCH` with `WITHDIST` and `Sort: "asc"`
+    - [x] Use key pattern `partner:locations` (no TTL)
+- [x] Use Case Layer
+    - [x] Create use case interface and implementation
+    - [x] Implement coordinate validation (Latitude −90…90, Longitude −180…180)
+    - [x] Implement distance formatting (e.g., "1.2 km")
+    - [x] (Optional) Enrich results by fetching partner profile details from PostgreSQL
+- [x] Delivery Layer
+    - [x] Create `internal/features/discovery/delivery/` HTTP handler file
+    - [x] Implement `POST /v1/discovery/location` handler
+        - [x] Parse `LocationRequest` from request body
+        - [x] Extract `partner_id` from session (Phase 2 context)
+        - [x] Call use case `UpdateLocation`
+    - [x] Implement `GET /v1/discovery/nearby` handler
+        - [x] Parse query params: `lat`, `lon`, `radius`, `unit`
+        - [x] Call use case `GetNearby`
+        - [x] Return list with distance field per entry
+- [x] Router Registration
+    - [x] Register discovery routes under `/v1/discovery` in `cmd/api/main.go`
+- [x] Verification (Definition of Done)
+    - [x] `POST /v1/discovery/location` correctly writes to Redis (verify with `GEOPOS partner:locations <id>`).
+    - [x] `GET /v1/discovery/nearby` returns partner IDs within the specified radius.
+    - [x] Response includes distance per partner (e.g., "1.2 km").
+    - [x] Invalid coordinates return a proper error response (400 Bad Request).
+    - [x] Code follows Feature Slice architecture and is compatible with Go v1.26.2.

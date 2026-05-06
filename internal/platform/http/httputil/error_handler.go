@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,7 @@ func HandleError(c *gin.Context, err error) {
 	case errors.Is(err, apperror.ErrInvalidInput):
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 	default:
+		slog.Error("Internal server error", "error", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }

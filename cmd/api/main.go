@@ -79,8 +79,10 @@ func run() error {
 
 	// Services feature (Phase 1)
 	serviceRepo := svcRepository.NewServiceRepository(dbPool, rdb)
+	partnerRepo := svcRepository.NewPartnerRepository(dbPool)
 	serviceUsecase := svcUsecase.NewServiceUsecase(serviceRepo)
-	serviceHandler := svcDelivery.NewServiceHandler(serviceUsecase)
+	partnerUsecase := svcUsecase.NewPartnerUsecase(serviceRepo, partnerRepo)
+	serviceHandler := svcDelivery.NewServiceHandler(serviceUsecase, partnerUsecase)
 
 	// Auth feature (Phase 2)
 	userRepo := authRepository.NewUserRepository(dbPool)

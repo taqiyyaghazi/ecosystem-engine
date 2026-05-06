@@ -1,0 +1,24 @@
+# Tasks - Partner Onboarding (Phase 3)
+
+- [x] Database & Migrations
+    - [x] Create/Update `migrations/202605050003_create_partners_table.sql` with `service_id` reference
+    - [x] Run migrations
+- [x] Service Feature Slice - Partner DTO
+    - [x] Create `internal/features/services/dto/partner_dto.go`
+    - [x] Define `PartnerResponse`
+- [x] Service Feature Slice - Repository
+    - [x] Add `CreatePartner(ctx context.Context, partner *entity.Partner) error` to `ServiceRepository`
+    - [x] Implement `CreatePartner` in `internal/features/services/repository/repository.go`
+- [x] Service Feature Slice - Usecase
+    - [x] Add `JoinAsPartner(ctx context.Context, userID string, serviceID string) (*dto.PartnerResponse, error) ` to `ServiceUsecase`
+    - [x] Implement `JoinAsPartner` (validate service existence, check for existing partner record, save to DB)
+- [x] Service Feature Slice - Delivery
+    - [x] Update `internal/features/services/delivery/handler.go`
+    - [x] Implement `POST /v1/services/:serviceId/partners` handler
+    - [x] Extract `userID` using `httputil.ExtractUserID(c)`
+    - [x] Call Usecase and return `201 Created`
+- [x] Verification (Definition of Done)
+    - [x] Table `partners` correctly references `services(id)`
+    - [x] Authenticated user can register as a partner for a valid service
+    - [x] System prevents duplicate partner registration for the same user (400 Bad Request)
+    - [x] New `partner_id` can be used in Discovery and Leaderboard features
