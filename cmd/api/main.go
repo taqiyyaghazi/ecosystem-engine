@@ -26,6 +26,9 @@ import (
 	serviceDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/delivery"
 	serviceRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/repository"
 	serviceUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
+	taskDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/delivery"
+	taskRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/repository"
+	taskUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/config"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
@@ -114,7 +117,12 @@ func run() error {
 	leaderboardUseCase := leaderboardUsecase.NewLeaderboardUseCase(leaderboardRepo, notificationUseCase)
 	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUseCase)
 
-	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler, leaderboardHandler)
+	// Tasks feature (Phase 8)
+	taskRepo := taskRepository.NewTaskRepository(dbPool, rdb)
+	taskUseCase := taskUsecase.NewTaskUsecase(taskRepo)
+	taskHandler := taskDelivery.NewTaskHandler(taskUseCase)
+
+	router := setupRouter(cfg.AppEnv, serviceHandler, authHandler, authMiddleware, rateLimiter, discoveryHandler, leaderboardHandler, taskHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.AppPort,
@@ -149,8 +157,6 @@ func run() error {
 	return nil
 }
 
-
-
 func setupRouter(
 	env string,
 	serviceHandler *serviceDelivery.ServiceHandler,
@@ -159,6 +165,7 @@ func setupRouter(
 	rateLimiter *ratelimit.RateLimiter,
 	discoveryHandler *discoveryDelivery.DiscoveryHandler,
 	leaderboardHandler *leaderboardDelivery.LeaderboardHandler,
+	taskHandler *taskDelivery.TaskHandler,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -194,6 +201,9 @@ func setupRouter(
 
 		// Leaderboard routes (Phase 5)
 		leaderboardHandler.RegisterRoutes(v1, protected)
+
+		// Tasks routes (Phase 8)
+		taskHandler.Route(v1)
 	}
 
 	return r

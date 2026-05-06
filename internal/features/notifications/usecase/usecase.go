@@ -39,7 +39,9 @@ func (u *notificationUsecase) Send(ctx context.Context, channel string, message 
 
 func (u *notificationUsecase) RunSubscriberLoop(ctx context.Context, channelPattern string) {
 	pubsub := u.repo.Subscribe(ctx, channelPattern)
-	defer pubsub.Close()
+	defer func() {
+		_ = pubsub.Close()
+	}()
 
 	ch := pubsub.Channel()
 

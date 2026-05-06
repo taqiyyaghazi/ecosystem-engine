@@ -16,3 +16,4 @@ vendor/
 # Temporary files
 tmp/
 *.logbin/
+invoices/

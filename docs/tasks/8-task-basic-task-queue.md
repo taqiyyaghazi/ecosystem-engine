@@ -1,0 +1,39 @@
+# Tasks - Basic Task Queue (Worker Pattern) (Phase 8)
+
+- [ ] Database Migration
+    - [ ] Create `migrations/202605200006_create_tasks_table.sql`
+    - [ ] Define `tasks` table with `id` (UUID PK), `task_type` (VARCHAR), `payload` (JSONB), `status` (VARCHAR, default PENDING), `error_message` (TEXT), `created_at`, `updated_at`
+    - [ ] Add `-- +goose Up` and `-- +goose Down` directives
+- [ ] Feature Slice Scaffold
+    - [ ] Create `internal/features/tasks/` directory structure
+        - [ ] `repository/` – Redis LPUSH (Producer) & BRPOP (Consumer), and PostgreSQL tracking
+        - [ ] `usecase/`    – Task logic (e.g., Invoice generation simulation)
+        - [ ] `dto/`        – TaskPayload (JSON)
+- [ ] DTO Layer
+    - [ ] Define `TaskPayload` struct matching `{ "task_id": "...", "type": "GENERATE_INVOICE" }` (or similar needed fields)
+- [ ] Repository Layer
+    - [ ] Create `internal/features/tasks/repository/` implementation
+    - [ ] Implement `PushTask(ctx, queueName, taskID)` using `redis.LPush(ctx, queueName, taskID)`
+    - [ ] Implement `PopTask(ctx, queueName)` using `redis.BRPop(ctx, 0, queueName)` to block until data is available
+    - [ ] Implement methods to track tasks in PostgreSQL (e.g., CreateTask, UpdateTaskStatus)
+- [ ] Use Case Layer
+    - [ ] Create use case interface and implementation for Invoice Generation (Consumer)
+    - [ ] Implement logic to process a task:
+        - [ ] Change DB status to `PROCESSING`
+        - [ ] Simulate PDF generation (e.g., `time.Sleep(3 * time.Second)`)
+        - [ ] After completion, change DB status to `COMPLETED`
+- [ ] Background Worker Integration (Consumer)
+    - [ ] Update `cmd/worker/main.go` to include the `tasks` worker loop
+    - [ ] Create an infinite loop that continuously calls `PopTask`
+    - [ ] Process popped tasks by calling the use case
+- [ ] Publisher Integration (API Server)
+    - [ ] Add logic to publish a task when a relevant action occurs (e.g., service completion)
+    - [ ] Save the task record to PostgreSQL with status `PENDING`
+    - [ ] Execute `PushTask` with payload `{ "task_id": "...", "type": "GENERATE_INVOICE" }`
+    - [ ] Return a fast success response to the user
+- [ ] Verification (Definition of Done)
+    - [ ] `tasks` table successfully deployed via `goose` migration
+    - [ ] API Server successfully pushes tasks to Redis using `LPUSH`
+    - [ ] Background Worker (`cmd/worker`) successfully pops tasks using `BRPOP` and processes them
+    - [ ] Task status in PostgreSQL automatically changes from `PENDING` to `COMPLETED`
+    - [ ] If the worker is stopped, unprocessed tasks remain safely in the Redis List

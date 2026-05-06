@@ -11,6 +11,8 @@ import (
 
 	notificationRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/repository"
 	notificationUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/usecase"
+	taskRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/repository"
+	taskUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/cache"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/config"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/database"
@@ -64,6 +66,10 @@ func run() error {
 	notificationRepo := notificationRepository.NewNotificationRepository(dbPool, rdb)
 	notificationUseCase := notificationUsecase.NewNotificationUsecase(notificationRepo)
 
+	// Tasks feature (Phase 8)
+	taskRepo := taskRepository.NewTaskRepository(dbPool, rdb)
+	taskUseCase := taskUsecase.NewTaskUsecase(taskRepo)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -75,6 +81,9 @@ func run() error {
 	// PSUBSCRIBE supports patterns like "notifications:*"
 	go notificationUseCase.RunSubscriberLoop(ctx, "notifications:*")
 
+	// Start task worker loop
+	go taskUseCase.WorkerLoop(ctx, "tasks:default")
+
 	<-ctx.Done()
 	slog.Info("Shutting down gracefully, waiting for active processors...")
 	notificationUseCase.Shutdown()
@@ -82,5 +91,3 @@ func run() error {
 	slog.Info("Worker exited")
 	return nil
 }
-
-
