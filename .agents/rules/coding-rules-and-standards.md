@@ -20,3 +20,8 @@ trigger: always_on
     - Strings: `min=5`, `max=255`, `uuid`, `email`.
     - Coordinates: `latitude`, `longitude`.
 - **Error Messages**: Ensure any new validation tags are also handled in `internal/apperror/validation.go` to provide human-readable error messages.
+
+## Agent Command Execution
+- **WSL and Go**: When the agent needs to run Go commands (like `go test`, `go build`, `make`, etc.), it MUST execute them within WSL and ensure the latest Go version is used via GVM.
+    - Preferred pattern: `wsl bash -c "source ~/.gvm/scripts/gvm && gvm use latest && <command>"`
+

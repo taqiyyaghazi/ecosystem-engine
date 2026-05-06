@@ -4,20 +4,26 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/dto"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/entity"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/usecase"
+	activityDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/dto"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
+	authDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/dto"
+	authEntity "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/entity"
+	authUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
 const sessionCookieName = "session_id"
 
 type AuthHandler struct {
-	usecase usecase.AuthUsecase
+	usecase         authUsecase.AuthUsecase
+	activityUsecase activityUsecase.ActivityUsecase
 }
 
-func NewAuthHandler(usecase usecase.AuthUsecase) *AuthHandler {
-	return &AuthHandler{usecase: usecase}
+func NewAuthHandler(usecase authUsecase.AuthUsecase, activityUsecase activityUsecase.ActivityUsecase) *AuthHandler {
+	return &AuthHandler{
+		usecase:         usecase,
+		activityUsecase: activityUsecase,
+	}
 }
 
 func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
@@ -31,7 +37,7 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req dto.RegisterRequest
+	var req authDto.RegisterRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -45,7 +51,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req dto.LoginRequest
+	var req authDto.LoginRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -62,12 +68,22 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    sessionID,
-		MaxAge:   int(entity.SessionTTL.Seconds()),
+		MaxAge:   int(authEntity.SessionTTL.Seconds()),
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+
+	// Log activity
+	if sessionData, err := h.usecase.Me(c.Request.Context(), sessionID); err == nil {
+		_ = h.activityUsecase.PublishEvent(c.Request.Context(), activityDto.ActivityEvent{
+			ActorID:   sessionData.UserID,
+			Action:    "LOGIN",
+			Payload:   map[string]interface{}{"user_agent": userAgent},
+			IPAddress: ipAddress,
+		})
+	}
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "login successful", gin.H{"session_id": sessionID})
 }

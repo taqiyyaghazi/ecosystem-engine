@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	activityRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/repository"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
 	authDelivery "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/delivery"
 	authRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/repository"
 	authUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/auth/usecase"
@@ -83,6 +85,10 @@ func run() error {
 		slog.Info("Redis connection closed")
 	}()
 
+	// Activity feature (Phase 9)
+	activityRepo := activityRepository.NewActivityRepository(dbPool, rdb)
+	activityUseCase := activityUsecase.NewActivityUsecase(activityRepo)
+
 	// Notifications feature (Phase 7)
 	notificationRepo := notificationRepository.NewNotificationRepository(dbPool, rdb)
 	notificationUseCase := notificationUsecase.NewNotificationUsecase(notificationRepo)
@@ -92,13 +98,13 @@ func run() error {
 	partnerRepo := serviceRepository.NewPartnerRepository(dbPool)
 	serviceUseCase := serviceUsecase.NewServiceUsecase(serviceRepo)
 	partnerUseCase := serviceUsecase.NewPartnerUsecase(serviceRepo, partnerRepo, notificationUseCase)
-	serviceHandler := serviceDelivery.NewServiceHandler(serviceUseCase, partnerUseCase)
+	serviceHandler := serviceDelivery.NewServiceHandler(serviceUseCase, partnerUseCase, activityUseCase)
 
 	// Auth feature (Phase 2)
 	userRepo := authRepository.NewUserRepository(dbPool)
 	sessionRepo := authRepository.NewSessionRepository(rdb)
 	authUseCase := authUsecase.NewAuthUsecase(userRepo, sessionRepo)
-	authHandler := authDelivery.NewAuthHandler(authUseCase)
+	authHandler := authDelivery.NewAuthHandler(authUseCase, activityUseCase)
 	authMiddleware := authDelivery.RequireAuth(authUseCase)
 
 	// Rate Limiter (Phase 3)
@@ -107,7 +113,7 @@ func run() error {
 	// Discovery feature (Phase 4)
 	discoveryRepo := discoveryRepository.NewDiscoveryRepository(rdb, dbPool)
 	discoveryUseCase := discoveryUsecase.NewDiscoveryUsecase(discoveryRepo)
-	discoveryHandler := discoveryDelivery.NewDiscoveryHandler(discoveryUseCase)
+	discoveryHandler := discoveryDelivery.NewDiscoveryHandler(discoveryUseCase, activityUseCase)
 
 	// Start background worker for stale data management
 	discoveryUseCase.StartCleanupWorker(context.Background())
@@ -115,7 +121,7 @@ func run() error {
 	// Leaderboard feature (Phase 5)
 	leaderboardRepo := leaderboardRepository.NewLeaderboardRepository(dbPool, rdb)
 	leaderboardUseCase := leaderboardUsecase.NewLeaderboardUseCase(leaderboardRepo, notificationUseCase)
-	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUseCase)
+	leaderboardHandler := leaderboardDelivery.NewLeaderboardHandler(leaderboardUseCase, activityUseCase)
 
 	// Tasks feature (Phase 8)
 	taskRepo := taskRepository.NewTaskRepository(dbPool, rdb)

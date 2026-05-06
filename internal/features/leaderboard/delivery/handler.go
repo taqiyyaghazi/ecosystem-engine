@@ -4,17 +4,23 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/dto"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/usecase"
+	activityDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/dto"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
+	leaderboardDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/dto"
+	leaderboardUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/leaderboard/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
 type LeaderboardHandler struct {
-	leaderboardUseCase usecase.LeaderboardUseCase
+	leaderboardUseCase leaderboardUsecase.LeaderboardUseCase
+	activityUsecase    activityUsecase.ActivityUsecase
 }
 
-func NewLeaderboardHandler(leaderboardUseCase usecase.LeaderboardUseCase) *LeaderboardHandler {
-	return &LeaderboardHandler{leaderboardUseCase: leaderboardUseCase}
+func NewLeaderboardHandler(leaderboardUseCase leaderboardUsecase.LeaderboardUseCase, activityUsecase activityUsecase.ActivityUsecase) *LeaderboardHandler {
+	return &LeaderboardHandler{
+		leaderboardUseCase: leaderboardUseCase,
+		activityUsecase:    activityUsecase,
+	}
 }
 
 func (h *LeaderboardHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
@@ -31,7 +37,7 @@ func (h *LeaderboardHandler) RegisterRoutes(public, protected *gin.RouterGroup) 
 }
 
 func (h *LeaderboardHandler) AddPoints(c *gin.Context) {
-	var req dto.PointRequest
+	var req leaderboardDto.PointRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -42,11 +48,19 @@ func (h *LeaderboardHandler) AddPoints(c *gin.Context) {
 		return
 	}
 
+	// Log activity
+	_ = h.activityUsecase.PublishEvent(c.Request.Context(), activityDto.ActivityEvent{
+		ActorID:   req.PartnerID,
+		Action:    "POINTS_EARNED",
+		Payload:   map[string]interface{}{"amount": req.Amount, "reason": req.Reason},
+		IPAddress: c.ClientIP(),
+	})
+
 	httputil.NewSuccessResponse(c, http.StatusOK, "points added successfully", nil)
 }
 
 func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
-	req := dto.LeaderboardQuery{
+	req := leaderboardDto.LeaderboardQuery{
 		Limit: 10,
 	}
 
@@ -69,7 +83,7 @@ func (h *LeaderboardHandler) GetPartnerRank(c *gin.Context) {
 		return
 	}
 
-	var query dto.PartnerRankQuery
+	var query leaderboardDto.PartnerRankQuery
 	if !httputil.BindQuery(c, &query) {
 		return
 	}

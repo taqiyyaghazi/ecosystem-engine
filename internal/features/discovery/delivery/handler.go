@@ -4,19 +4,25 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/dto"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/usecase"
+	activityDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/dto"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
+	discoveryDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/dto"
+	discoveryUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/discovery/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
 // DiscoveryHandler wires the discovery use case to HTTP endpoints.
 type DiscoveryHandler struct {
-	usecase usecase.DiscoveryUsecase
+	usecase         discoveryUsecase.DiscoveryUsecase
+	activityUsecase activityUsecase.ActivityUsecase
 }
 
 // NewDiscoveryHandler constructs a DiscoveryHandler.
-func NewDiscoveryHandler(uc usecase.DiscoveryUsecase) *DiscoveryHandler {
-	return &DiscoveryHandler{usecase: uc}
+func NewDiscoveryHandler(uc discoveryUsecase.DiscoveryUsecase, activityUc activityUsecase.ActivityUsecase) *DiscoveryHandler {
+	return &DiscoveryHandler{
+		usecase:         uc,
+		activityUsecase: activityUc,
+	}
 }
 
 // RegisterRoutes mounts the discovery endpoints under the provided router group.
@@ -36,7 +42,7 @@ func (h *DiscoveryHandler) UpdateLocation(c *gin.Context) {
 		return
 	}
 
-	var req dto.LocationRequest
+	var req discoveryDto.LocationRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -45,6 +51,14 @@ func (h *DiscoveryHandler) UpdateLocation(c *gin.Context) {
 		httputil.HandleError(c, err)
 		return
 	}
+
+	// Log activity
+	_ = h.activityUsecase.PublishEvent(c.Request.Context(), activityDto.ActivityEvent{
+		ActorID:   userID,
+		Action:    "UPDATE_LOCATION",
+		Payload:   map[string]interface{}{"lat": req.Latitude, "lon": req.Longitude},
+		IPAddress: c.ClientIP(),
+	})
 
 	httputil.NewSuccessResponse(c, http.StatusOK, "location updated successfully", nil)
 }
@@ -66,7 +80,7 @@ func (h *DiscoveryHandler) SetOffline(c *gin.Context) {
 
 // GetNearby handles GET /v1/discovery/nearby
 func (h *DiscoveryHandler) GetNearby(c *gin.Context) {
-	req := dto.NearbyRequest{
+	req := discoveryDto.NearbyRequest{
 		Radius: 5,
 		Unit:   "km",
 		Limit:  20,

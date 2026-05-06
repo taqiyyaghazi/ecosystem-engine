@@ -1,0 +1,37 @@
+# Tasks - Event Streaming & Activity Logs (Phase 9)
+
+- [ ] Database Migration
+    - [ ] Create `migrations/202605250007_create_activity_logs_table.sql`
+    - [ ] Define `activity_logs` table with `id` (UUID PK), `actor_id` (UUID NOT NULL), `action` (VARCHAR), `payload` (JSONB), `ip_address` (VARCHAR), `created_at`
+    - [ ] Add `-- +goose Up` and `-- +goose Down` directives
+- [ ] Feature Slice Scaffold
+    - [ ] Create `internal/features/activity/` directory structure
+        - [ ] `repository/` – Redis XADD (Producer) & XREADGROUP (Consumer), and PostgreSQL tracking
+        - [ ] `usecase/`    – Event processing logic
+        - [ ] `dto/`        – ActivityEvent schema
+- [ ] DTO Layer
+    - [ ] Define `ActivityEvent` or related payload structs for the Redis stream data
+- [ ] Repository Layer
+    - [ ] Create `internal/features/activity/repository/stream_repo.go` and `pg_repo.go` (or combined)
+    - [ ] Implement `RecordEvent(ctx context.Context, event map[string]interface{}) error` using `redis.XAdd` on `stream:activity`
+    - [ ] Implement `ReadEvents(ctx context.Context, consumerName string) ([]redis.XMessage, error)` using `redis.XReadGroup` on `cg:activity_processor`
+    - [ ] Implement saving activity logs to PostgreSQL (`InsertActivityLog`)
+    - [ ] Implement consumer group initialization logic (using `redis.XGroupCreateMkStream`)
+    - [ ] Implement `AcknowledgeEvent(ctx context.Context, messageID string) error` using `redis.XAck`
+- [ ] Publisher Integration (API Server)
+    - [ ] Modify critical action handlers (e.g., Login, Join Partner, Update Location, Points Earned) to publish activity events
+    - [ ] Inject activity repository into relevant use cases/handlers
+    - [ ] Call `RecordEvent` with `actor_id`, `action`, `payload`, and `ip_address`
+- [ ] Consumer Group Setup & Worker Integration
+    - [ ] Update `cmd/worker/main.go` to initialize the consumer group `cg:activity_processor` on startup
+    - [ ] Implement an activity processor loop that calls `ReadEvents` using `XREADGROUP`
+    - [ ] Iterate through the fetched messages:
+        - [ ] Extract data from Redis `XMessage`
+        - [ ] Save to `activity_logs` table in PostgreSQL
+        - [ ] Send `XACK` to Redis upon successful insertion
+- [ ] Verification (Definition of Done)
+    - [ ] Migration table `activity_logs` successfully applied in PostgreSQL
+    - [ ] Consumer Group initializes correctly on application startup
+    - [ ] Important events (Login, Join Partner, Update Location) are recorded into the Redis Stream
+    - [ ] Worker successfully moves data from Redis to PostgreSQL and sends `XACK`
+    - [ ] System handles high event volume efficiently without blocking API requests

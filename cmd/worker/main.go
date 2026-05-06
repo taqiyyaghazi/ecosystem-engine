@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	activityRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/repository"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
 	notificationRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/repository"
 	notificationUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/notifications/usecase"
 	taskRepository "github.com/taqiyyaghazi/ecosystem-engine/internal/features/tasks/repository"
@@ -62,6 +64,15 @@ func run() error {
 		slog.Info("Redis connection closed")
 	}()
 
+	// Activity feature (Phase 9)
+	activityRepo := activityRepository.NewActivityRepository(dbPool, rdb)
+	activityUseCase := activityUsecase.NewActivityUsecase(activityRepo)
+
+	// Initialize Activity Consumer Group
+	if err := activityRepo.InitConsumerGroup(context.Background()); err != nil {
+		slog.Error("Failed to initialize activity consumer group", "error", err)
+	}
+
 	// Notifications feature (Phase 7)
 	notificationRepo := notificationRepository.NewNotificationRepository(dbPool, rdb)
 	notificationUseCase := notificationUsecase.NewNotificationUsecase(notificationRepo)
@@ -83,6 +94,9 @@ func run() error {
 
 	// Start task worker loop
 	go taskUseCase.WorkerLoop(ctx, "tasks:default")
+
+	// Start activity worker loop
+	go activityUseCase.WorkerLoop(ctx, "activity_worker_1")
 
 	<-ctx.Done()
 	slog.Info("Shutting down gracefully, waiting for active processors...")

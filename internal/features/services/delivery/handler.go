@@ -5,20 +5,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/apperror"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
-	"github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
+	activityDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/dto"
+	activityUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/activity/usecase"
+	serviceDto "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/dto"
+	serviceUsecase "github.com/taqiyyaghazi/ecosystem-engine/internal/features/services/usecase"
 	"github.com/taqiyyaghazi/ecosystem-engine/internal/platform/http/httputil"
 )
 
 type ServiceHandler struct {
-	serviceUseCase usecase.ServiceUsecase
-	partnerUseCase usecase.PartnerUsecase
+	serviceUseCase  serviceUsecase.ServiceUsecase
+	partnerUseCase  serviceUsecase.PartnerUsecase
+	activityUsecase activityUsecase.ActivityUsecase
 }
 
-func NewServiceHandler(serviceUseCase usecase.ServiceUsecase, partnerUseCase usecase.PartnerUsecase) *ServiceHandler {
+func NewServiceHandler(serviceUseCase serviceUsecase.ServiceUsecase, partnerUseCase serviceUsecase.PartnerUsecase, activityUsecase activityUsecase.ActivityUsecase) *ServiceHandler {
 	return &ServiceHandler{
-		serviceUseCase: serviceUseCase,
-		partnerUseCase: partnerUseCase,
+		serviceUseCase:  serviceUseCase,
+		partnerUseCase:  partnerUseCase,
+		activityUsecase: activityUsecase,
 	}
 }
 
@@ -35,7 +39,7 @@ func (h *ServiceHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 func (h *ServiceHandler) Create(c *gin.Context) {
-	var req dto.CreateServiceRequest
+	var req serviceDto.CreateServiceRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -84,7 +88,7 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req dto.UpdateServiceRequest
+	var req serviceDto.UpdateServiceRequest
 	if !httputil.BindJSON(c, &req) {
 		return
 	}
@@ -133,6 +137,14 @@ func (h *ServiceHandler) JoinAsPartner(c *gin.Context) {
 		httputil.HandleError(c, err)
 		return
 	}
+
+	// Log activity
+	_ = h.activityUsecase.PublishEvent(c.Request.Context(), activityDto.ActivityEvent{
+		ActorID:   userID,
+		Action:    "JOIN_PARTNER",
+		Payload:   map[string]interface{}{"service_id": serviceID},
+		IPAddress: c.ClientIP(),
+	})
 
 	httputil.NewSuccessResponse(c, http.StatusCreated, "joined as partner successfully", res)
 }
